@@ -1,0 +1,303 @@
+/* All visuals come from Bootstrap 5 + tom-select.bootstrap5.
+   This file only:
+     1. Overrides Bootstrap's theme tokens with the Radix Colors palette
+        (Slate neutrals + Amber primary + Grass/Orange/Red accents) so
+        light + dark stay coherent without per-component patching.
+     2. Adds the few bits Bootstrap doesn't cover (chart container, theme
+        toggle icon swap, help box, monospace stats column, Tom-Select
+        polish). */
+
+
+/* ============================================================
+ * Radix Colors palette — https://www.radix-ui.com/colors
+ * Steps follow Radix conventions:
+ *   1-2  app/subtle backgrounds      9-10 solid (brand color)
+ *   3-5  component backgrounds      11    low-contrast text
+ *   6-8  borders                    12    high-contrast text
+ * ============================================================ */
+
+:root, [data-bs-theme="light"] {
+  /* Slate (neutrals) */
+  --slate-1: #fcfcfd;  --slate-2: #f9f9fb;  --slate-3: #f0f0f3;
+  --slate-4: #e8e8ec;  --slate-5: #e0e1e6;  --slate-6: #d9d9e0;
+  --slate-7: #cdced6;  --slate-8: #b9bbc6;  --slate-9: #8b8d98;
+  --slate-10: #80828d; --slate-11: #60646c; --slate-12: #1c2024;
+
+  /* Indigo (primary — standard Radix CTA, harmonious in both themes) */
+  --indigo-3:  #edf2fe; --indigo-6:  #c1d0ff;
+  --indigo-9:  #3e63dd; --indigo-10: #3358d4;
+  --indigo-11: #3a5bc7; --indigo-12: #1f2d5c;
+
+  /* Grass (success / "vendre vite") */
+  --grass-3: #ebf9eb; --grass-6: #b7dfba;
+  --grass-9: #46a758; --grass-11: #2a7e3b;
+
+  /* Amber (warning / "patient") — kept for the "max price" reco card only */
+  --amber-3:  #fff7c2; --amber-6:  #f3d673;
+  --amber-9:  #ffc53d; --amber-11: #ab6400;
+
+  /* Red (danger) */
+  --red-3:  #ffe5e5; --red-6:  #f9c6c6;
+  --red-9:  #e5484d; --red-11: #c62a2f;
+
+  /* Bootstrap token overrides */
+  --bs-body-bg:                  var(--slate-1);
+  --bs-body-color:               var(--slate-12);
+  --bs-body-secondary-bg:        var(--slate-2);
+  --bs-secondary-bg:             var(--slate-2);
+  --bs-tertiary-bg:              var(--slate-3);
+  --bs-body-tertiary-bg:         var(--slate-3);
+  --bs-body-secondary-color:     var(--slate-11);
+  --bs-secondary-color:          var(--slate-11);
+  --bs-emphasis-color:           var(--slate-12);
+  --bs-border-color:             var(--slate-6);
+
+  --bs-primary:                  var(--indigo-9);
+  --bs-primary-rgb:              62, 99, 221;
+  --bs-primary-bg-subtle:        var(--indigo-3);
+  --bs-primary-border-subtle:    var(--indigo-6);
+  --bs-primary-text-emphasis:    var(--indigo-11);
+
+  --bs-success-bg-subtle:        var(--grass-3);
+  --bs-success-border-subtle:    var(--grass-6);
+  --bs-success-text-emphasis:    var(--grass-11);
+
+  --bs-warning-bg-subtle:        var(--amber-3);
+  --bs-warning-border-subtle:    var(--amber-6);
+  --bs-warning-text-emphasis:    var(--amber-11);
+
+  --bs-danger-bg-subtle:         var(--red-3);
+  --bs-danger-border-subtle:     var(--red-6);
+  --bs-danger-text-emphasis:     var(--red-11);
+
+  --bs-link-color-rgb:           58, 91, 199;   /* indigo-11 */
+  --bs-link-hover-color-rgb:     31, 45, 92;    /* indigo-12 */
+}
+
+[data-bs-theme="dark"] {
+  /* Slate dark */
+  --slate-1: #111113;  --slate-2: #18191b;  --slate-3: #212225;
+  --slate-4: #272a2d;  --slate-5: #2e3135;  --slate-6: #363a3f;
+  --slate-7: #43484e;  --slate-8: #5a6169;  --slate-9: #696e77;
+  --slate-10: #777b84; --slate-11: #b0b4ba; --slate-12: #edeef0;
+
+  /* Indigo dark — step 9 stays #3e63dd, designed by Radix to read on
+     both light and dark backgrounds with white text. */
+  --indigo-3:  #182449; --indigo-6:  #2d4484;
+  --indigo-9:  #3e63dd; --indigo-10: #5472e4;
+  --indigo-11: #9eb1ff; --indigo-12: #d6e1ff;
+
+  /* Grass dark */
+  --grass-3: #0e1f17; --grass-6: #245530;
+  --grass-9: #46a758; --grass-11: #71d083;
+
+  /* Amber dark — only used by the "patient" reco card. */
+  --amber-3:  #302008; --amber-6:  #5c3d05;
+  --amber-9:  #ffc53d; --amber-11: #ffca16;
+
+  /* Red dark */
+  --red-3:  #291415; --red-6:  #671e22;
+  --red-9:  #e5484d; --red-11: #ff9592;
+
+  /* Same mappings as light — they reference the CSS vars above which
+     resolve to dark steps. */
+  --bs-body-bg:                  var(--slate-1);
+  --bs-body-color:               var(--slate-12);
+  --bs-body-secondary-bg:        var(--slate-2);
+  --bs-secondary-bg:             var(--slate-2);
+  --bs-tertiary-bg:              var(--slate-3);
+  --bs-body-tertiary-bg:         var(--slate-3);
+  --bs-body-secondary-color:     var(--slate-11);
+  --bs-secondary-color:          var(--slate-11);
+  --bs-emphasis-color:           var(--slate-12);
+  --bs-border-color:             var(--slate-6);
+
+  --bs-primary-bg-subtle:        var(--indigo-3);
+  --bs-primary-border-subtle:    var(--indigo-6);
+  --bs-primary-text-emphasis:    var(--indigo-11);
+
+  --bs-success-bg-subtle:        var(--grass-3);
+  --bs-success-border-subtle:    var(--grass-6);
+  --bs-success-text-emphasis:    var(--grass-11);
+
+  --bs-warning-bg-subtle:        var(--amber-3);
+  --bs-warning-border-subtle:    var(--amber-6);
+  --bs-warning-text-emphasis:    var(--amber-11);
+
+  --bs-danger-bg-subtle:         var(--red-3);
+  --bs-danger-border-subtle:     var(--red-6);
+  --bs-danger-text-emphasis:     var(--red-11);
+
+  --bs-link-color-rgb:           158, 177, 255;
+  --bs-link-hover-color-rgb:     214, 225, 255;
+}
+
+/* indigo-9 (#3e63dd) is dark enough for white text in both themes. */
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-bg: var(--indigo-9);
+  --bs-btn-hover-bg: var(--indigo-10);
+  --bs-btn-active-bg: var(--indigo-10);
+  --bs-btn-border-color: var(--indigo-9);
+  --bs-btn-hover-border-color: var(--indigo-10);
+  --bs-btn-active-border-color: var(--indigo-10);
+}
+
+
+/* ============================================================
+ * App-specific bits Bootstrap doesn't cover
+ * ============================================================ */
+
+.chart-wrap { min-height: 320px; }
+
+/* Liquidity badge — qualitative pill that flips colors per tier. */
+.liquidity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--bs-border-radius-pill, 50rem);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.liquidity-tier-1 { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+.liquidity-tier-2 { background: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+.liquidity-tier-3 { background: var(--bs-secondary-bg);       color: var(--bs-body-color); }
+.liquidity-tier-4 { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.liquidity-tier-5 { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis); }
+
+/* Breakdown table: keep every row's last cell padded so the median price
+   column stays aligned whether the row is clickable (chevron) or not. */
+#breakdown-tbody td:last-child {
+  position: relative;
+  padding-right: 2.25rem;
+}
+
+.breakdown-row {
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.breakdown-row td:last-child::after {
+  content: "›";
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--bs-secondary-color);
+  font-size: 1.25rem;
+  line-height: 1;
+  opacity: 0.4;
+  transition: opacity .15s ease, color .15s ease, transform .15s ease;
+}
+.breakdown-row:hover {
+  background-color: var(--bs-primary-bg-subtle) !important;
+}
+.breakdown-row:hover td:last-child::after {
+  opacity: 1;
+  color: var(--bs-primary-text-emphasis);
+  transform: translate(3px, -50%);
+}
+
+#stats-body td:last-child {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--bs-font-monospace);
+}
+
+/* Inline help block — uses Bootstrap surface tokens so it follows the theme. */
+.help-box {
+  background-color: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-left: 3px solid var(--bs-primary);
+  border-radius: var(--bs-border-radius);
+  padding: 0.75rem 1rem;
+  color: var(--bs-body-color);
+}
+
+/* Theme toggle: ghost icon button — no border, same border-radius as the
+   rest of the UI (cards, inputs, buttons), color follows body text. */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--bs-border-radius);
+  color: var(--bs-secondary-color);
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.btn-icon:hover {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+}
+.btn-icon:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
+[data-bs-theme="light"] .theme-icon-dark,
+[data-bs-theme="dark"]  .theme-icon-light { display: none; }
+
+
+/* ============================================================
+ * Tom-Select: align with Bootstrap input sizing.
+ * (The official tom-select.bootstrap5.css already handles colors via
+ *  Bootstrap variables, so the theme switch flows through.)
+ * ============================================================ */
+
+.ts-wrapper.form-select {
+  padding: 0;
+  background-image: none;
+}
+
+/* tom-select.bootstrap5.css doesn't fully bind its internal text/background
+   colors to Bootstrap's theme tokens, so the selected item text and the
+   dropdown stay light-themed when data-bs-theme="dark" is set. Pin
+   everything to the Bootstrap variables explicitly. */
+.ts-control,
+.ts-wrapper.single .ts-control {
+  background-color: var(--bs-body-bg);
+  border-color: var(--bs-border-color);
+}
+.ts-control,
+.ts-control .item,
+.ts-control input { color: var(--bs-body-color); }
+.ts-control input::placeholder { color: var(--bs-secondary-color); opacity: 1; }
+.ts-control .item.active {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
+
+.ts-dropdown {
+  background-color: var(--bs-body-bg);
+  border-color: var(--bs-border-color);
+  color: var(--bs-body-color);
+}
+.ts-dropdown .option { color: var(--bs-body-color); }
+.ts-dropdown .optgroup-header {
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-tertiary-bg);
+}
+
+/* Highlighted option uses the subtle indigo pair so it reads in both modes. */
+.ts-dropdown .active {
+  background-color: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+}
+
+/* Multi-select tags: indigo pill, white text reads in both themes. */
+.ts-wrapper.multi .ts-control > .item {
+  background-color: var(--bs-primary);
+  color: #fff;
+}
