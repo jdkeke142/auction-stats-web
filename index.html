@@ -38,11 +38,6 @@
       <form id="form" class="vstack gap-3">
 
         <div>
-          <label for="item" class="form-label fw-medium" data-i18n="form.item">Item</label>
-          <select id="item" class="form-select" required></select>
-        </div>
-
-        <div>
           <label class="form-label fw-medium d-block" id="period-label" data-i18n="form.period">Période</label>
           <div class="btn-group period-presets mb-2" role="group" aria-labelledby="period-label">
             <button type="button" class="btn btn-outline-secondary" data-period="7" data-i18n="form.period.7d">7 jours</button>
@@ -60,6 +55,11 @@
               <input type="date" id="to" class="form-control" required>
             </div>
           </div>
+        </div>
+
+        <div>
+          <label for="item" class="form-label fw-medium" data-i18n="form.item">Item</label>
+          <select id="item" class="form-select" required></select>
         </div>
 
         <div id="variant-block" hidden>

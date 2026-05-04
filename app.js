@@ -439,11 +439,11 @@ async function init() {
   }
 
   buildIndices();
+  initPeriodPresets();
+  initDefaultPeriod();
   initItemDropdown();
   initVariantDropdown();
   initEnchantDropdown();
-  initPeriodPresets();
-  initDefaultPeriod();
   applyLang(); // refresh meta line + Tom-Select renderings now that DATA is loaded
 
   $("from").addEventListener("change", onPeriodChange);
@@ -462,6 +462,7 @@ function resetForm() {
   $("variant-block").hidden = true;
   hideEnchants();
   initDefaultPeriod();
+  rebuildItemDropdown(null);
   if (chart) {
     try { chart.destroy(); } catch (_) { /* noop */ }
     chart = null;
@@ -512,13 +513,29 @@ function initItemDropdown() {
 
 function rebuildItemDropdown(preserveValue) {
   itemTS.clearOptions();
-  const options = [...salesByMaterial.entries()]
-    .sort((a, b) => b[1].length - a[1].length)
-    .map(([m, sales]) => ({
+  const { fromTs, toTs } = getCurrentPeriod();
+
+  const counts = new Map();
+  for (const [material, sales] of salesByMaterial) {
+    let c = 0;
+    for (const s of sales) {
+      if (s.t >= fromTs && s.t <= toTs) c++;
+    }
+    counts.set(material, c);
+  }
+
+  // Hide items with no sales in the selected period — the dropdown becomes a
+  // "what's selling now" leaderboard. Always keep the currently-selected item
+  // in the list, even at 0, so changing period doesn't yank the selection
+  // (the user gets the explicit empty diagnostic on Analyze instead).
+  const options = [...counts.entries()]
+    .filter(([m, c]) => c > 0 || m === preserveValue)
+    .sort((a, b) => b[1] - a[1])
+    .map(([m, count]) => ({
       value: m,
       text: prettyName(m),
-      count: sales.length,
-      countLabel: t("item_count_suffix", fmt.format(sales.length)),
+      count,
+      countLabel: t("item_count_suffix", fmt.format(count)),
     }));
   itemTS.addOptions(options);
   itemTS.settings.placeholder = t("item_placeholder");
@@ -628,10 +645,9 @@ function initDefaultPeriod() {
 function onPeriodChange() {
   syncPeriodPresetButtons();
   const item = itemTS.getValue();
-  if (item) {
-    updateVariantForItem(item);
-    updateEnchantsForItem(item);
-  }
+  rebuildItemDropdown(item);
+  updateVariantForItem(item);
+  updateEnchantsForItem(item);
 }
 
 function getCurrentPeriod() {
