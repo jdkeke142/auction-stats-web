@@ -211,10 +211,13 @@
   font-family: var(--bs-font-monospace);
 }
 
-/* Period preset chips: subtle indigo on hover/active so they sit below the
-   primary "Analyze" CTA in visual hierarchy — same pattern as Tom-Select's
+/* Period preset chips: rest state on slate tokens (Bootstrap's default
+   secondary is hardcoded #6c757d, which doesn't follow our Radix palette);
+   hover/active flip to indigo subtle — same pattern as Tom-Select's
    highlighted option and the reco cards' bg-*-subtle look. */
 .period-presets .btn-outline-secondary {
+  --bs-btn-color:              var(--slate-11);
+  --bs-btn-border-color:       var(--slate-7);
   --bs-btn-hover-color:        var(--bs-primary-text-emphasis);
   --bs-btn-hover-bg:           var(--bs-primary-bg-subtle);
   --bs-btn-hover-border-color: var(--bs-primary-border-subtle);
