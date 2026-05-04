@@ -42,14 +42,23 @@
           <select id="item" class="form-select" required></select>
         </div>
 
-        <div class="row g-3">
-          <div class="col-sm-6">
-            <label for="from" class="form-label fw-medium" data-i18n="form.from">Du</label>
-            <input type="date" id="from" class="form-control" required>
+        <div>
+          <label class="form-label fw-medium" id="period-label" data-i18n="form.period">Période</label>
+          <div class="btn-group period-presets mb-2" role="group" aria-labelledby="period-label">
+            <button type="button" class="btn btn-outline-secondary" data-period="7" data-i18n="form.period.7d">7 jours</button>
+            <button type="button" class="btn btn-outline-secondary" data-period="30" data-i18n="form.period.30d">30 jours</button>
+            <button type="button" class="btn btn-outline-secondary" data-period="90" data-i18n="form.period.90d">90 jours</button>
+            <button type="button" class="btn btn-outline-secondary" data-period="all" data-i18n="form.period.all">Tout</button>
           </div>
-          <div class="col-sm-6">
-            <label for="to" class="form-label fw-medium" data-i18n="form.to">Au</label>
-            <input type="date" id="to" class="form-control" required>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label for="from" class="form-label small text-secondary mb-1" data-i18n="form.from">Du</label>
+              <input type="date" id="from" class="form-control" required>
+            </div>
+            <div class="col-sm-6">
+              <label for="to" class="form-label small text-secondary mb-1" data-i18n="form.to">Au</label>
+              <input type="date" id="to" class="form-control" required>
+            </div>
           </div>
         </div>
 

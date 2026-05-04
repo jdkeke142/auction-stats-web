@@ -10,6 +10,11 @@ const STRINGS = {
     "title.brand": "Prix HDV",
     "title.suffix": "— Dynastia",
     "form.item": "Item",
+    "form.period": "Période",
+    "form.period.7d": "7 jours",
+    "form.period.30d": "30 jours",
+    "form.period.90d": "90 jours",
+    "form.period.all": "Tout",
     "form.from": "Du",
     "form.to": "Au",
     "form.optional": "(optionnel)",
@@ -96,6 +101,11 @@ const STRINGS = {
     "title.brand": "Auction Prices",
     "title.suffix": "— Dynastia",
     "form.item": "Item",
+    "form.period": "Period",
+    "form.period.7d": "7 days",
+    "form.period.30d": "30 days",
+    "form.period.90d": "90 days",
+    "form.period.all": "All",
     "form.from": "From",
     "form.to": "To",
     "form.optional": "(optional)",
@@ -432,6 +442,7 @@ async function init() {
   initItemDropdown();
   initVariantDropdown();
   initEnchantDropdown();
+  initPeriodPresets();
   initDefaultPeriod();
   applyLang(); // refresh meta line + Tom-Select renderings now that DATA is loaded
 
@@ -560,14 +571,62 @@ function initEnchantDropdown() {
   });
 }
 
+// Sliding windows anchored to dataRange.max — a calendar "this month" would
+// give near-empty results on the 1st of a month, which is bad UX.
+// `days: null` = full history.
+const PERIOD_PRESETS = [
+  { id: "7",   days: 7 },
+  { id: "30",  days: 30 },
+  { id: "90",  days: 90 },
+  { id: "all", days: null },
+];
+
+const isoDay = (ts) => new Date(ts).toISOString().slice(0, 10);
+
+function presetBounds(preset) {
+  const fromTs = preset.days === null ? dataRange.min : dataRange.max - preset.days * DAY_MS;
+  return { from: isoDay(fromTs), to: isoDay(dataRange.max) };
+}
+
+function setPeriodFromPreset(id) {
+  const preset = PERIOD_PRESETS.find((p) => p.id === id);
+  if (!preset) return;
+  const { from, to } = presetBounds(preset);
+  $("from").value = from;
+  $("to").value = to;
+  syncPeriodPresetButtons();
+}
+
+function syncPeriodPresetButtons() {
+  const fromVal = $("from").value;
+  const toVal = $("to").value;
+  let activeId = null;
+  for (const p of PERIOD_PRESETS) {
+    const b = presetBounds(p);
+    if (fromVal === b.from && toVal === b.to) { activeId = p.id; break; }
+  }
+  for (const btn of document.querySelectorAll("[data-period]")) {
+    const on = btn.dataset.period === activeId;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+}
+
+function initPeriodPresets() {
+  for (const btn of document.querySelectorAll("[data-period]")) {
+    btn.addEventListener("click", () => {
+      setPeriodFromPreset(btn.dataset.period);
+      onPeriodChange();
+    });
+  }
+}
+
 function initDefaultPeriod() {
-  const lastDate = new Date(dataRange.max);
-  const fromDate = new Date(dataRange.max - 30 * DAY_MS);
-  $("to").value = lastDate.toISOString().slice(0, 10);
-  $("from").value = fromDate.toISOString().slice(0, 10);
+  setPeriodFromPreset("30");
 }
 
 function onPeriodChange() {
+  syncPeriodPresetButtons();
   const item = itemTS.getValue();
   if (item) {
     updateVariantForItem(item);

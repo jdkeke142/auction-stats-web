@@ -211,6 +211,18 @@
   font-family: var(--bs-font-monospace);
 }
 
+/* Period preset chips: subtle indigo on hover/active so they sit below the
+   primary "Analyze" CTA in visual hierarchy — same pattern as Tom-Select's
+   highlighted option and the reco cards' bg-*-subtle look. */
+.period-presets .btn-outline-secondary {
+  --bs-btn-hover-color:        var(--bs-primary-text-emphasis);
+  --bs-btn-hover-bg:           var(--bs-primary-bg-subtle);
+  --bs-btn-hover-border-color: var(--bs-primary-border-subtle);
+  --bs-btn-active-color:       var(--bs-primary-text-emphasis);
+  --bs-btn-active-bg:          var(--bs-primary-bg-subtle);
+  --bs-btn-active-border-color: var(--bs-primary-border-subtle);
+}
+
 /* Inline help block — uses Bootstrap surface tokens so it follows the theme. */
 .help-box {
   background-color: var(--bs-tertiary-bg);
