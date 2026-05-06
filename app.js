@@ -58,7 +58,7 @@ const STRINGS = {
     "results.heading": "À quel prix vendre&nbsp;?",
     "results.unit": "par unité",
     "results.help":
-      "Prix <strong>par unité</strong> en <strong>brut</strong> — c'est ce qui s'affiche dans /ah (taxe HDV de 10% incluse). Les <strong>totaux</strong> côté Par joueur affichent le net (ce que tu reçois) avec le brut en dessous pour info. <strong>Prix juste</strong> = milieu du marché. <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché.",
+      "Prix <strong>par unité</strong> = ce qui s'affiche dans /ah (taxe HDV de 10% incluse). Les <strong>totaux/revenus</strong> côté Par joueur = ce que tu reçois après la taxe. <strong>Prix juste</strong> = milieu du marché. <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché.",
     "reco.fast": "Vendre vite",
     "reco.fast.sub": "25% des ventes en dessous",
     "reco.fair": "Prix juste",
@@ -70,8 +70,6 @@ const STRINGS = {
     "empty.default": "Aucune vente trouvée pour ces critères.",
     "ui.theme": "Changer de thème",
     "ui.lang": "Langue",
-    "ui.gross": "brut",
-    "ui.gross.help": "Le grand chiffre = net (ce que reçoit le vendeur). Le petit chiffre = brut (prix listé dans /ah, incluant la taxe HDV de 10%).",
     "liquidity.tier.1": "🔥 Très liquide",
     "liquidity.tier.2": "⚡ Liquide",
     "liquidity.tier.3": "✓ Marché actif",
@@ -184,7 +182,7 @@ const STRINGS = {
     "results.heading": "What price should I sell at?",
     "results.unit": "per unit",
     "results.help":
-      "Per-unit prices shown <strong>gross</strong> — that's what /ah displays (10% AH tax included). On the per-player side, <strong>totals</strong> show the net (what you actually receive) with the gross underneath for context. <strong>Fair price</strong> = middle of the market. <strong>Sell fast</strong> = a bit below. <strong>Patient</strong> = top of the market.",
+      "<strong>Per-unit prices</strong> = what /ah shows (10% AH tax included). <strong>Totals/revenue</strong> on the per-player side = what you actually receive after tax. <strong>Fair price</strong> = middle of the market. <strong>Sell fast</strong> = a bit below. <strong>Patient</strong> = top of the market.",
     "reco.fast": "Sell fast",
     "reco.fast.sub": "25% of sales are below",
     "reco.fair": "Fair price",
@@ -196,8 +194,6 @@ const STRINGS = {
     "empty.default": "No sales match these criteria.",
     "ui.theme": "Toggle theme",
     "ui.lang": "Language",
-    "ui.gross": "gross",
-    "ui.gross.help": "Big number = net (seller's receipt). Small number = gross (the listed price in /ah, including the 10% auction-house tax).",
     "liquidity.tier.1": "🔥 Very liquid",
     "liquidity.tier.2": "⚡ Liquid",
     "liquidity.tier.3": "✓ Active market",
@@ -296,13 +292,6 @@ function fmtPriceRound(n) {
 const TAX_RATE = 0.10;
 const grossPrice = (net) => net / (1 - TAX_RATE);
 
-// Compact secondary "brut" line for table cells (stacked under the net price).
-function fmtBrutSubcell(net) {
-  return `<div class="text-secondary small opacity-75 mt-1">${fmtPrice(grossPrice(net))} ${t("ui.gross")}</div>`;
-}
-function fmtBrutSubcellRound(net) {
-  return `<div class="text-secondary small opacity-75 mt-1">${fmtPriceRound(grossPrice(net))} ${t("ui.gross")}</div>`;
-}
 
 function fmtDate(ts) {
   return new Date(ts).toLocaleDateString(
@@ -1846,11 +1835,8 @@ function runPersonalAnalysis() {
   const total = sales.reduce((acc, s) => acc + s.p, 0);
   const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
   const median = quantile(unitPrices, 0.5);
-  // Total revenu stays dual (net big + brut small) — it's an aggregate where
-  // the dual context is informative. Per-unit median is gross only (matches
-  // /ah listings, single value keeps the card clean).
+  // Single-value convention: totals are net (received), per-unit is gross.
   $("personal-total").textContent = fmtPrice(total);
-  $("personal-total-brut").textContent = `${fmtPrice(grossPrice(total))} ${t("ui.gross")}`;
   $("personal-count").textContent = fmt.format(sales.length);
   $("personal-median").textContent = fmtPriceRound(median);
 
@@ -1960,7 +1946,7 @@ function renderPersonalBreakdown(sales) {
     tr.innerHTML = `
       <td>${escapeHtml(row.label)}</td>
       <td class="text-end font-monospace">${fmt.format(row.count)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(row.total)}${fmtBrutSubcellRound(row.total)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(row.total)}</td>
       <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}</td>
     `;
     tr.addEventListener("click", () => switchToMarketWithSale(row.sample));
@@ -2045,8 +2031,7 @@ function buildPersonalChartOptions(data) {
         return `
           <div style="padding:.5rem .75rem;font-family:inherit">
             <div style="font-weight:600;font-size:.8rem;color:${axisColor};margin-bottom:.25rem">${fmtDateTime(point.x)}</div>
-            <div style="margin-bottom:.15rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(point.y)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("personal.chart.legend")}</span></div>
-            <div style="color:${axisColor};font-size:.8rem;opacity:.75">${fmtPrice(grossPrice(point.y))} ${t("ui.gross")}</div>
+            <div><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(point.y)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("personal.chart.legend")}</span></div>
           </div>`;
       },
     },
@@ -2084,7 +2069,7 @@ function renderPersonalTable(sales) {
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
       <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}</td>
-      <td class="text-end font-monospace">${fmtPrice(sale.p)}${fmtBrutSubcell(sale.p)}</td>
+      <td class="text-end font-monospace">${fmtPrice(sale.p)}</td>
       <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
     tr.querySelector(".personal-item-link")?.addEventListener("click", (e) => {
