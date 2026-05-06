@@ -64,6 +64,8 @@ const STRINGS = {
     "empty.default": "Aucune vente trouvée pour ces critères.",
     "ui.theme": "Changer de thème",
     "ui.lang": "Langue",
+    "ui.net": "Net",
+    "ui.net.tip": "Affiche les prix nets de la taxe HDV (10%)",
     "liquidity.tier.1": "🔥 Très liquide",
     "liquidity.tier.2": "⚡ Liquide",
     "liquidity.tier.3": "✓ Marché actif",
@@ -182,6 +184,8 @@ const STRINGS = {
     "empty.default": "No sales match these criteria.",
     "ui.theme": "Toggle theme",
     "ui.lang": "Language",
+    "ui.net": "Net",
+    "ui.net.tip": "Show prices net of the 10% auction-house tax",
     "liquidity.tier.1": "🔥 Very liquid",
     "liquidity.tier.2": "⚡ Liquid",
     "liquidity.tier.3": "✓ Active market",
@@ -270,6 +274,18 @@ function fmtPrice(n) {
 }
 function fmtPriceRound(n) {
   return fmtPrice(Math.round(n));
+}
+
+// Auction-house tax. Plugin config (zAuctionHouseV3 config.yml) declares a
+// global PURCHASE tax of 10%. When the toggle is on, every numeric price is
+// scaled by (1 - TAX_RATE) BEFORE display/aggregation so the user sees what
+// they'd actually pocket. Applied at the data layer (unitPrice + raw s.p
+// reads) so chart axes get round numbers, not at format time.
+const TAX_RATE = 0.10;
+let applyTax = localStorage.getItem("apply_tax") !== "false"; // default on
+
+function effectivePrice(p) {
+  return applyTax ? p * (1 - TAX_RATE) : p;
 }
 
 function fmtDate(ts) {
@@ -546,6 +562,16 @@ async function init() {
     runPersonalAnalysis();
   });
   $("personal-reset").addEventListener("click", resetPersonalForm);
+
+  // Net-price toggle: re-render whichever results section is currently shown.
+  const netToggle = $("net-prices");
+  netToggle.checked = applyTax;
+  netToggle.addEventListener("change", () => {
+    applyTax = netToggle.checked;
+    localStorage.setItem("apply_tax", String(applyTax));
+    if (!$("results").hidden) analyze();
+    if (!$("personal-results").hidden) runPersonalAnalysis();
+  });
   $("form").addEventListener("submit", (e) => {
     e.preventDefault();
     analyze();
@@ -993,7 +1019,7 @@ function isStrictMode() {
   return !!(cb && cb.checked);
 }
 
-const unitPrice = (s) => s.p / Math.max(1, s.a);
+const unitPrice = (s) => effectivePrice(s.p) / Math.max(1, s.a);
 
 // Convert a duration in milliseconds into a localized human label
 // (rounded to a sensible unit for the magnitude).
@@ -1762,7 +1788,7 @@ function runPersonalAnalysis() {
   $("personal-empty").hidden = true;
   $("personal-results").hidden = false;
 
-  const total = sales.reduce((acc, s) => acc + s.p, 0);
+  const total = sales.reduce((acc, s) => acc + effectivePrice(s.p), 0);
   const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
   const median = quantile(unitPrices, 0.5);
   $("personal-total").textContent = fmtPrice(total);
@@ -1804,7 +1830,7 @@ function drawPersonalChart(salesAsc) {
 
   let cumul = 0;
   const data = chrono.map((s) => {
-    cumul += s.p;
+    cumul += effectivePrice(s.p);
     return { x: s.t, y: cumul };
   });
 
@@ -1887,7 +1913,7 @@ function renderPersonalTable(sales) {
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
       <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}</td>
-      <td class="text-end font-monospace">${fmtPrice(sale.p)}</td>
+      <td class="text-end font-monospace">${fmtPrice(effectivePrice(sale.p))}</td>
       <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
     tr.querySelector(".personal-item-link")?.addEventListener("click", (e) => {
