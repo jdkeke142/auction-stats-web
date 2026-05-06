@@ -617,6 +617,8 @@ function resetPersonalForm() {
   initDefaultPeriod("personal");
   rebuildPersonalItemFilter();
   personalPage = 0;
+  personalSortBy = "t";
+  personalSortDir = "desc";
   if (personalChart) {
     try { personalChart.destroy(); } catch (_) { /* noop */ }
     personalChart = null;
@@ -1411,7 +1413,43 @@ let personalVariantTS = null;
 let personalEnchantTS = null;
 let personalChart = null;
 let personalPage = 0;
+let personalSortBy = "t";
+let personalSortDir = "desc";
 const PERSONAL_PAGE_SIZE = 50;
+
+function getPersonalSortValue(sale, key) {
+  switch (key) {
+    case "t":     return sale.t;
+    case "item":  return formatSaleLabel(sale).toLowerCase();
+    case "a":     return sale.a;
+    case "unit":  return unitPrice(sale);
+    case "total": return effectivePrice(sale.p);
+    case "buyer": return (sale.b ? (DATA.players[sale.b] || sale.b) : "").toLowerCase();
+    default:      return 0;
+  }
+}
+
+function personalSortComparator(a, b) {
+  const dir = personalSortDir === "asc" ? 1 : -1;
+  const va = getPersonalSortValue(a, personalSortBy);
+  const vb = getPersonalSortValue(b, personalSortBy);
+  if (va < vb) return -1 * dir;
+  if (va > vb) return 1 * dir;
+  return 0;
+}
+
+function setPersonalSort(key) {
+  if (personalSortBy === key) {
+    personalSortDir = personalSortDir === "asc" ? "desc" : "asc";
+  } else {
+    personalSortBy = key;
+    // Numeric/date columns default to desc (most recent / biggest first);
+    // text columns default to asc (alphabetical).
+    personalSortDir = ["item", "buyer"].includes(key) ? "asc" : "desc";
+  }
+  personalPage = 0;
+  runPersonalAnalysis();
+}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
@@ -1795,7 +1833,7 @@ function runPersonalAnalysis() {
   $("personal-count").textContent = fmt.format(sales.length);
   $("personal-median").textContent = fmtPriceRound(median);
 
-  const sorted = sales.slice().sort((a, b) => b.t - a.t);
+  const sorted = sales.slice().sort(personalSortComparator);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PERSONAL_PAGE_SIZE));
   if (personalPage >= totalPages) personalPage = totalPages - 1;
   if (personalPage < 0) personalPage = 0;
@@ -1894,14 +1932,25 @@ function buildPersonalChartOptions(data) {
 }
 
 function renderPersonalTable(sales) {
-  $("personal-thead").innerHTML = `<tr>
-    <th>${t("personal.table.col.date")}</th>
-    <th>${t("personal.table.col.item")}</th>
-    <th class="text-end">${t("personal.table.col.qty")}</th>
-    <th class="text-end">${t("personal.table.col.price_unit")}</th>
-    <th class="text-end">${t("personal.table.col.price_total")}</th>
-    <th>${t("personal.table.col.buyer")}</th>
-  </tr>`;
+  const cols = [
+    { key: "t",     i18n: "personal.table.col.date" },
+    { key: "item",  i18n: "personal.table.col.item" },
+    { key: "a",     i18n: "personal.table.col.qty",         end: true },
+    { key: "unit",  i18n: "personal.table.col.price_unit",  end: true },
+    { key: "total", i18n: "personal.table.col.price_total", end: true },
+    { key: "buyer", i18n: "personal.table.col.buyer" },
+  ];
+  $("personal-thead").innerHTML = "<tr>" + cols.map((c) => {
+    const isActive = c.key === personalSortBy;
+    const arrow = isActive ? (personalSortDir === "asc" ? "↑" : "↓") : "↕";
+    const classes = ["sortable"];
+    if (isActive) classes.push("sort-active");
+    if (c.end) classes.push("text-end");
+    return `<th class="${classes.join(" ")}" data-sort="${c.key}">${escapeHtml(t(c.i18n))} <span class="sort-icon">${arrow}</span></th>`;
+  }).join("") + "</tr>";
+  for (const th of $("personal-thead").querySelectorAll("th.sortable")) {
+    th.addEventListener("click", () => setPersonalSort(th.dataset.sort));
+  }
 
   const tbody = $("personal-tbody");
   tbody.innerHTML = "";

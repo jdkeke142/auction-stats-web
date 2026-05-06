@@ -240,6 +240,30 @@
   --bs-btn-active-border-color: var(--bs-primary-border-subtle);
 }
 
+/* Sortable table headers — click to sort asc, click again to toggle desc.
+   Inactive columns show a low-opacity ↕ as a discovery hint; active column
+   gets ↑ / ↓ in primary-emphasis to flag direction. */
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color .15s ease;
+}
+th.sortable:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+th.sortable .sort-icon {
+  display: inline-block;
+  margin-left: 0.25rem;
+  font-size: 0.85em;
+  opacity: 0.3;
+  transition: opacity .15s ease, color .15s ease;
+}
+th.sortable.sort-active .sort-icon {
+  opacity: 1;
+  color: var(--bs-primary-text-emphasis);
+}
+
 /* Compact chevron pagination buttons — same slate-rest / indigo-subtle-hover
    palette as the period chips so the affordance is consistent. */
 .pagination-btn {
