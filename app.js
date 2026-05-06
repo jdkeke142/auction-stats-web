@@ -1934,6 +1934,8 @@ function switchToMarketWithSale(sale) {
   itemTS.setValue(sale.m, false);
   // The item onChange handler rebuilds the variant + enchant blocks; pre-fill
   // those after the rebuild (microtask delay so Tom-Select is populated).
+  // Pre-fill only — the user triggers Analyser themselves, same flow as
+  // applyBreakdownFilter (`app.js`).
   Promise.resolve().then(() => {
     if (sale.v) {
       const cfg = VARIANT_CONFIG[sale.m];
@@ -1948,8 +1950,7 @@ function switchToMarketWithSale(sale) {
         enchantTS.addItem(`${k}:${v}`, true);
       }
     }
-    analyze();
-    $("section-market").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("form").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
