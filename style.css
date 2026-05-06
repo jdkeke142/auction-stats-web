@@ -211,6 +211,20 @@
   font-family: var(--bs-font-monospace);
 }
 
+/* Tab navigation (Marché / Mes ventes). Inactive tabs sit in slate so the
+   active one (solid indigo via Bootstrap's nav-pills default) reads as the
+   single picked option. Hover on inactive uses the same indigo subtle wash
+   as the period chips for consistency. */
+.mode-tabs .nav-link {
+  color: var(--slate-11);
+  background-color: transparent;
+  border: 0;
+}
+.mode-tabs .nav-link:hover:not(.active) {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-primary-bg-subtle);
+}
+
 /* Period preset chips: rest state on slate tokens (Bootstrap's default
    secondary is hardcoded #6c757d, which doesn't follow our Radix palette);
    hover/active flip to indigo subtle — same pattern as Tom-Select's

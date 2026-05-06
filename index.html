@@ -33,6 +33,17 @@
 
 <main class="container pb-5">
 
+  <ul class="nav nav-pills mode-tabs mb-4" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" data-mode="market" type="button" role="tab" data-i18n="tab.market">Marché</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-mode="personal" type="button" role="tab" data-i18n="tab.personal">Mes ventes</button>
+    </li>
+  </ul>
+
+  <section id="section-market">
+
   <div class="card shadow-sm mb-4">
     <div class="card-body">
       <form id="form" class="vstack gap-3">
@@ -174,6 +185,99 @@
   <div id="empty" class="alert alert-secondary text-center mb-0" hidden data-i18n="empty.default">
     Aucune vente trouvée pour ces critères.
   </div>
+
+  </section>
+
+  <section id="section-personal" hidden>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <form id="personal-form" class="vstack gap-3" onsubmit="event.preventDefault()">
+
+          <div>
+            <label for="personal-player" class="form-label fw-medium" data-i18n="personal.player_label">Joueur</label>
+            <select id="personal-player" class="form-select" required></select>
+          </div>
+
+          <div>
+            <label class="form-label fw-medium d-block" id="personal-period-label" data-i18n="form.period">Période</label>
+            <div class="btn-group period-presets mb-2" role="group" aria-labelledby="personal-period-label">
+              <button type="button" class="btn btn-outline-secondary" data-period="7" data-period-scope="personal" data-i18n="form.period.7d">7 jours</button>
+              <button type="button" class="btn btn-outline-secondary" data-period="30" data-period-scope="personal" data-i18n="form.period.30d">30 jours</button>
+              <button type="button" class="btn btn-outline-secondary" data-period="90" data-period-scope="personal" data-i18n="form.period.90d">90 jours</button>
+              <button type="button" class="btn btn-outline-secondary" data-period="all" data-period-scope="personal" data-i18n="form.period.all">Tout</button>
+            </div>
+            <div class="row g-2">
+              <div class="col-sm-6">
+                <label for="personal-from" class="visually-hidden" data-i18n="form.from">Du</label>
+                <input type="date" id="personal-from" class="form-control" required>
+              </div>
+              <div class="col-sm-6">
+                <label for="personal-to" class="visually-hidden" data-i18n="form.to">Au</label>
+                <input type="date" id="personal-to" class="form-control" required>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="personal-item-filter" class="form-label fw-medium">
+              <span data-i18n="personal.item_filter_label">Item</span>
+              <span class="text-secondary fw-normal" data-i18n="form.optional">(optionnel)</span>
+            </label>
+            <select id="personal-item-filter" class="form-select"></select>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <div id="personal-results" hidden>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card h-100 bg-success-subtle border-success-subtle">
+            <div class="card-body text-center">
+              <div class="text-success-emphasis text-uppercase small fw-semibold mb-2" data-i18n="personal.summary.total">Total revenu</div>
+              <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-success-emphasis" id="personal-total">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 bg-primary-subtle border-primary-subtle">
+            <div class="card-body text-center">
+              <div class="text-primary-emphasis text-uppercase small fw-semibold mb-2" data-i18n="personal.summary.count">Ventes</div>
+              <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-primary-emphasis" id="personal-count">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 bg-primary-subtle border-primary-subtle">
+            <div class="card-body text-center">
+              <div class="text-primary-emphasis text-uppercase small fw-semibold mb-2" data-i18n="personal.summary.median">Médiane unitaire</div>
+              <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-primary-emphasis" id="personal-median">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-body fw-semibold" data-i18n="personal.table.heading">Mes ventes</div>
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle">
+            <thead id="personal-thead"></thead>
+            <tbody id="personal-tbody"></tbody>
+          </table>
+        </div>
+        <div id="personal-pagination" class="card-footer d-flex justify-content-between align-items-center small" hidden></div>
+      </div>
+
+    </div>
+
+    <div id="personal-empty" class="alert alert-secondary text-center mb-0" hidden data-i18n="personal.no_transactions">
+      Aucune vente sur la période pour ce joueur.
+    </div>
+
+  </section>
 
 </main>
 

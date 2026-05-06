@@ -9,6 +9,27 @@ const STRINGS = {
     // Static (referenced by data-i18n / data-i18n-html in index.html)
     "title.brand": "Prix HDV",
     "title.suffix": "— Dynastia",
+    "tab.market": "Marché",
+    "tab.personal": "Mes ventes",
+    "personal.player_label": "Joueur",
+    "personal.player_placeholder": "Choisir un joueur…",
+    "personal.player_no_results": "Aucun joueur trouvé",
+    "personal.item_filter_label": "Item",
+    "personal.item_filter_placeholder": "Tous les items",
+    "personal.summary.total": "Total revenu",
+    "personal.summary.count": "Ventes",
+    "personal.summary.median": "Médiane unitaire",
+    "personal.table.heading": "Mes ventes",
+    "personal.table.col.date": "Date",
+    "personal.table.col.item": "Item",
+    "personal.table.col.qty": "Qté",
+    "personal.table.col.price_unit": "Prix u.",
+    "personal.table.col.price_total": "Total",
+    "personal.table.col.buyer": "Acheteur",
+    "personal.no_transactions": "Aucune vente sur la période pour ce joueur.",
+    "personal.pagination.prev": "Précédent",
+    "personal.pagination.next": "Suivant",
+    "personal.pagination.range": (n, total) => `Page ${n} / ${total}`,
     "form.item": "Item",
     "form.period": "Période",
     "form.period.7d": "7 jours",
@@ -100,6 +121,27 @@ const STRINGS = {
   en: {
     "title.brand": "Auction Prices",
     "title.suffix": "— Dynastia",
+    "tab.market": "Market",
+    "tab.personal": "My sales",
+    "personal.player_label": "Player",
+    "personal.player_placeholder": "Pick a player…",
+    "personal.player_no_results": "No player found",
+    "personal.item_filter_label": "Item",
+    "personal.item_filter_placeholder": "All items",
+    "personal.summary.total": "Total revenue",
+    "personal.summary.count": "Sales",
+    "personal.summary.median": "Unit median",
+    "personal.table.heading": "My sales",
+    "personal.table.col.date": "Date",
+    "personal.table.col.item": "Item",
+    "personal.table.col.qty": "Qty",
+    "personal.table.col.price_unit": "Unit",
+    "personal.table.col.price_total": "Total",
+    "personal.table.col.buyer": "Buyer",
+    "personal.no_transactions": "No sales for this player in the selected period.",
+    "personal.pagination.prev": "Previous",
+    "personal.pagination.next": "Next",
+    "personal.pagination.range": (n, total) => `Page ${n} of ${total}`,
     "form.item": "Item",
     "form.period": "Period",
     "form.period.7d": "7 days",
@@ -417,6 +459,12 @@ function applyLang() {
     // to get a fresh, correctly-translated message.
     if (item) analyze();
   }
+
+  // Personal view re-renders so its placeholders + table headers + pagination
+  // labels switch language too.
+  if (personalPlayerTS) rebuildPersonalPlayerOptions();
+  if (personalItemFilterTS) rebuildPersonalItemFilter();
+  if (personalPlayer && DATA) runPersonalAnalysis();
 }
 
 // ===========================================================================
@@ -440,19 +488,32 @@ async function init() {
 
   buildIndices();
   initPeriodPresets();
-  initDefaultPeriod();
+  initDefaultPeriod("market");
+  initDefaultPeriod("personal");
   initItemDropdown();
   initVariantDropdown();
   initEnchantDropdown();
+  initPersonalPlayerPicker();
+  initPersonalItemFilter();
+  initModeTabs();
   applyLang(); // refresh meta line + Tom-Select renderings now that DATA is loaded
 
   $("from").addEventListener("change", onPeriodChange);
   $("to").addEventListener("change", onPeriodChange);
+  $("personal-from").addEventListener("change", onPersonalPeriodChange);
+  $("personal-to").addEventListener("change", onPersonalPeriodChange);
   $("form").addEventListener("submit", (e) => {
     e.preventDefault();
     analyze();
   });
   $("reset-form").addEventListener("click", resetForm);
+
+  // If a player was previously selected, the Tom-Select silent setValue above
+  // doesn't fire onChange — render results explicitly.
+  if (personalPlayer) {
+    rebuildPersonalItemFilter();
+    runPersonalAnalysis();
+  }
 }
 
 function resetForm() {
@@ -598,6 +659,14 @@ const PERIOD_PRESETS = [
   { id: "all", days: null },
 ];
 
+// Each scope has its own pair of date inputs. Market is the original form;
+// the personal view duplicates the controls so the two periods are
+// independent (you might want 30j for market and Tout for your sales).
+const PERIOD_SCOPES = {
+  market:   { from: "from",          to: "to" },
+  personal: { from: "personal-from", to: "personal-to" },
+};
+
 const isoDay = (ts) => new Date(ts).toISOString().slice(0, 10);
 
 function presetBounds(preset) {
@@ -605,24 +674,30 @@ function presetBounds(preset) {
   return { from: isoDay(fromTs), to: isoDay(dataRange.max) };
 }
 
-function setPeriodFromPreset(id) {
+function setPeriodFromPreset(id, scope = "market") {
   const preset = PERIOD_PRESETS.find((p) => p.id === id);
   if (!preset) return;
   const { from, to } = presetBounds(preset);
-  $("from").value = from;
-  $("to").value = to;
-  syncPeriodPresetButtons();
+  const ids = PERIOD_SCOPES[scope];
+  $(ids.from).value = from;
+  $(ids.to).value = to;
+  syncPeriodPresetButtons(scope);
 }
 
-function syncPeriodPresetButtons() {
-  const fromVal = $("from").value;
-  const toVal = $("to").value;
+function syncPeriodPresetButtons(scope = "market") {
+  const ids = PERIOD_SCOPES[scope];
+  const fromVal = $(ids.from).value;
+  const toVal = $(ids.to).value;
   let activeId = null;
   for (const p of PERIOD_PRESETS) {
     const b = presetBounds(p);
     if (fromVal === b.from && toVal === b.to) { activeId = p.id; break; }
   }
-  for (const btn of document.querySelectorAll("[data-period]")) {
+  // Market chips have no data-period-scope; personal chips have one.
+  const selector = scope === "market"
+    ? "[data-period]:not([data-period-scope])"
+    : `[data-period][data-period-scope="${scope}"]`;
+  for (const btn of document.querySelectorAll(selector)) {
     const on = btn.dataset.period === activeId;
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
@@ -632,28 +707,31 @@ function syncPeriodPresetButtons() {
 function initPeriodPresets() {
   for (const btn of document.querySelectorAll("[data-period]")) {
     btn.addEventListener("click", () => {
-      setPeriodFromPreset(btn.dataset.period);
-      onPeriodChange();
+      const scope = btn.dataset.periodScope || "market";
+      setPeriodFromPreset(btn.dataset.period, scope);
+      if (scope === "personal") onPersonalPeriodChange();
+      else onPeriodChange();
     });
   }
 }
 
-function initDefaultPeriod() {
-  setPeriodFromPreset("30");
+function initDefaultPeriod(scope = "market") {
+  setPeriodFromPreset("30", scope);
 }
 
 function onPeriodChange() {
-  syncPeriodPresetButtons();
+  syncPeriodPresetButtons("market");
   const item = itemTS.getValue();
   rebuildItemDropdown(item);
   updateVariantForItem(item);
   updateEnchantsForItem(item);
 }
 
-function getCurrentPeriod() {
+function getCurrentPeriod(scope = "market") {
+  const ids = PERIOD_SCOPES[scope];
   return {
-    fromTs: new Date($("from").value).getTime(),
-    toTs: new Date($("to").value).getTime() + DAY_MS - 1,
+    fromTs: new Date($(ids.from).value).getTime(),
+    toTs: new Date($(ids.to).value).getTime() + DAY_MS - 1,
   };
 }
 
@@ -1201,6 +1279,331 @@ function buildTrendText(medianData) {
   const delta = ((last - first) / first) * 100;
   const arrow = delta > 5 ? "↑" : delta < -5 ? "↓" : "→";
   return t("trend_text", arrow, delta >= 0 ? "+" : "", delta.toFixed(1));
+}
+
+// ===========================================================================
+// Mode tabs (Marché / Mes ventes)
+// ===========================================================================
+
+let currentMode = "market";
+
+function setMode(mode) {
+  currentMode = mode;
+  localStorage.setItem("mode", mode);
+  $("section-market").hidden = mode !== "market";
+  $("section-personal").hidden = mode !== "personal";
+  for (const btn of document.querySelectorAll(".mode-tabs .nav-link")) {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  }
+}
+
+function initModeTabs() {
+  for (const btn of document.querySelectorAll(".mode-tabs .nav-link")) {
+    btn.addEventListener("click", () => setMode(btn.dataset.mode));
+  }
+  if (localStorage.getItem("mode") === "personal") setMode("personal");
+}
+
+// ===========================================================================
+// Personal "Mes ventes" view
+// ===========================================================================
+
+let personalPlayer = null;
+let personalPlayerTS = null;
+let personalItemFilterTS = null;
+let personalPage = 0;
+const PERSONAL_PAGE_SIZE = 50;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]),
+  );
+}
+
+function initPersonalPlayerPicker() {
+  personalPlayerTS = new TomSelect("#personal-player", {
+    options: [],
+    valueField: "value",
+    labelField: "text",
+    searchField: ["text"],
+    maxOptions: 200,
+    create: false,
+    sortField: { field: "$order" },
+    render: {
+      option: (data, escape) =>
+        `<div><strong>${escape(data.text)}</strong> ` +
+        `<span style="color:var(--bs-secondary-color);font-size:.85em">(${escape(data.countLabel)})</span></div>`,
+      item: (data, escape) => `<div>${escape(data.text)}</div>`,
+      no_results: () => `<div class="no-results">${t("personal.player_no_results")}</div>`,
+    },
+    onChange: (uuid) => {
+      personalPlayer = uuid || null;
+      if (personalPlayer) localStorage.setItem("personal_player", personalPlayer);
+      else localStorage.removeItem("personal_player");
+      personalPage = 0;
+      rebuildPersonalItemFilter();
+      runPersonalAnalysis();
+    },
+  });
+
+  if (!DATA.players) {
+    personalPlayerTS.disable();
+    return;
+  }
+  rebuildPersonalPlayerOptions();
+
+  // Restore previous selection on reload (silent — onChange wires runPersonalAnalysis below).
+  const stored = localStorage.getItem("personal_player");
+  if (stored && DATA.players[stored]) {
+    personalPlayer = stored;
+    personalPlayerTS.setValue(stored, true);
+  }
+}
+
+function rebuildPersonalPlayerOptions() {
+  if (!personalPlayerTS || !DATA.players) return;
+  const previous = personalPlayerTS.getValue();
+  personalPlayerTS.clearOptions();
+  // Sort by sale-count desc so the most active sellers surface first; name as tiebreaker.
+  const counts = new Map();
+  for (const s of DATA.sales) {
+    if (s.s) counts.set(s.s, (counts.get(s.s) || 0) + 1);
+  }
+  const options = Object.entries(DATA.players)
+    .map(([uuid, name]) => {
+      const count = counts.get(uuid) || 0;
+      return {
+        value: uuid,
+        text: name,
+        count,
+        countLabel: t("item_count_suffix", fmt.format(count)),
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.text.localeCompare(b.text));
+  personalPlayerTS.addOptions(options);
+  personalPlayerTS.settings.placeholder = t("personal.player_placeholder");
+  syncTSPlaceholder(personalPlayerTS);
+  if (previous) personalPlayerTS.setValue(previous, true);
+  personalPlayerTS.refreshOptions(false);
+}
+
+function initPersonalItemFilter() {
+  personalItemFilterTS = new TomSelect("#personal-item-filter", {
+    options: [],
+    valueField: "value",
+    labelField: "text",
+    searchField: ["text", "value"],
+    maxOptions: 200,
+    create: false,
+    sortField: { field: "$order" },
+    render: {
+      option: (data, escape) => `<div>${escape(data.text)}</div>`,
+      item: (data, escape) => `<div>${escape(data.text)}</div>`,
+      no_results: () => `<div class="no-results">${t("item_no_results")}</div>`,
+    },
+    onChange: () => {
+      personalPage = 0;
+      runPersonalAnalysis();
+    },
+  });
+  rebuildPersonalItemFilter();
+}
+
+function rebuildPersonalItemFilter() {
+  if (!personalItemFilterTS) return;
+  const previousValue = personalItemFilterTS.getValue();
+  personalItemFilterTS.clearOptions();
+
+  const allItemsOption = { value: "", text: t("personal.item_filter_placeholder") };
+
+  if (!personalPlayer) {
+    personalItemFilterTS.addOption(allItemsOption);
+    personalItemFilterTS.setValue("", true);
+    return;
+  }
+
+  const { fromTs, toTs } = getCurrentPeriod("personal");
+  const counts = new Map();
+  for (const s of DATA.sales) {
+    if (s.s !== personalPlayer) continue;
+    if (s.t < fromTs || s.t > toTs) continue;
+    counts.set(s.m, (counts.get(s.m) || 0) + 1);
+  }
+
+  const options = [allItemsOption];
+  for (const [m, c] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+    options.push({
+      value: m,
+      text: `${prettyName(m)} (${fmt.format(c)})`,
+    });
+  }
+  personalItemFilterTS.addOptions(options);
+  personalItemFilterTS.settings.placeholder = t("personal.item_filter_placeholder");
+  syncTSPlaceholder(personalItemFilterTS);
+  if (previousValue && counts.has(previousValue)) {
+    personalItemFilterTS.setValue(previousValue, true);
+  } else {
+    personalItemFilterTS.setValue("", true);
+  }
+  personalItemFilterTS.refreshOptions(false);
+}
+
+function onPersonalPeriodChange() {
+  syncPeriodPresetButtons("personal");
+  rebuildPersonalItemFilter();
+  personalPage = 0;
+  runPersonalAnalysis();
+}
+
+function formatSaleLabel(sale) {
+  let label = prettyName(sale.m);
+  if (sale.v) {
+    const cfg = VARIANT_CONFIG[sale.m];
+    if (cfg) {
+      const val = sale.v[cfg.key];
+      if (val !== undefined) {
+        label += ` (${cfg.formatValue(cfg.key === "flight" ? parseInt(val, 10) : val)})`;
+      }
+    }
+  }
+  if (sale.e && Object.keys(sale.e).length) {
+    const enchs = Object.entries(sale.e)
+      .map(([k, v]) => enchLabel(k, v))
+      .join(", ");
+    label += ` — ${enchs}`;
+  }
+  if (sale.n) label = `${sale.n} (${label})`;
+  return label;
+}
+
+function runPersonalAnalysis() {
+  if (!personalPlayer) {
+    $("personal-results").hidden = true;
+    $("personal-empty").hidden = true;
+    return;
+  }
+
+  const { fromTs, toTs } = getCurrentPeriod("personal");
+  const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
+  const sales = DATA.sales.filter(
+    (s) =>
+      s.s === personalPlayer &&
+      s.t >= fromTs &&
+      s.t <= toTs &&
+      (!itemFilter || s.m === itemFilter),
+  );
+
+  if (!sales.length) {
+    $("personal-results").hidden = true;
+    $("personal-empty").hidden = false;
+    return;
+  }
+
+  $("personal-empty").hidden = true;
+  $("personal-results").hidden = false;
+
+  const total = sales.reduce((acc, s) => acc + s.p, 0);
+  const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
+  const median = quantile(unitPrices, 0.5);
+  $("personal-total").textContent = fmt.format(total);
+  $("personal-count").textContent = fmt.format(sales.length);
+  $("personal-median").textContent = fmt.format(Math.round(median));
+
+  const sorted = sales.slice().sort((a, b) => b.t - a.t);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PERSONAL_PAGE_SIZE));
+  if (personalPage >= totalPages) personalPage = totalPages - 1;
+  if (personalPage < 0) personalPage = 0;
+  const pageSlice = sorted.slice(
+    personalPage * PERSONAL_PAGE_SIZE,
+    (personalPage + 1) * PERSONAL_PAGE_SIZE,
+  );
+
+  renderPersonalTable(pageSlice);
+  renderPersonalPagination(totalPages);
+}
+
+function renderPersonalTable(sales) {
+  $("personal-thead").innerHTML = `<tr>
+    <th>${t("personal.table.col.date")}</th>
+    <th>${t("personal.table.col.item")}</th>
+    <th class="text-end">${t("personal.table.col.qty")}</th>
+    <th class="text-end">${t("personal.table.col.price_unit")}</th>
+    <th class="text-end">${t("personal.table.col.price_total")}</th>
+    <th>${t("personal.table.col.buyer")}</th>
+  </tr>`;
+
+  const tbody = $("personal-tbody");
+  tbody.innerHTML = "";
+  for (const sale of sales) {
+    const tr = document.createElement("tr");
+    const buyerName = sale.b ? (DATA.players[sale.b] || sale.b.slice(0, 8)) : null;
+    tr.innerHTML = `
+      <td>${escapeHtml(fmtDate(sale.t))}</td>
+      <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
+      <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
+      <td class="text-end font-monospace">${fmt.format(Math.round(unitPrice(sale)))}</td>
+      <td class="text-end font-monospace">${fmt.format(sale.p)}</td>
+      <td>${buyerName ? `<a href="#" class="personal-buyer-link link-secondary text-decoration-none">${escapeHtml(buyerName)}</a>` : "—"}</td>
+    `;
+    tr.querySelector(".personal-item-link")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchToMarketWithSale(sale);
+    });
+    tr.querySelector(".personal-buyer-link")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (sale.b && DATA.players[sale.b]) {
+        personalPlayerTS.setValue(sale.b, false);
+      }
+    });
+    tbody.appendChild(tr);
+  }
+}
+
+function renderPersonalPagination(totalPages) {
+  const pag = $("personal-pagination");
+  if (totalPages <= 1) {
+    pag.hidden = true;
+    pag.innerHTML = "";
+    return;
+  }
+  pag.hidden = false;
+  pag.innerHTML = `
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="personal-prev" ${personalPage === 0 ? "disabled" : ""}>${t("personal.pagination.prev")}</button>
+    <span class="text-secondary">${t("personal.pagination.range", personalPage + 1, totalPages)}</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="personal-next" ${personalPage >= totalPages - 1 ? "disabled" : ""}>${t("personal.pagination.next")}</button>
+  `;
+  $("personal-prev")?.addEventListener("click", () => {
+    personalPage--;
+    runPersonalAnalysis();
+  });
+  $("personal-next")?.addEventListener("click", () => {
+    personalPage++;
+    runPersonalAnalysis();
+  });
+}
+
+function switchToMarketWithSale(sale) {
+  setMode("market");
+  itemTS.setValue(sale.m, false);
+  // The item onChange handler rebuilds the variant + enchant blocks; pre-fill
+  // those after the rebuild (microtask delay so Tom-Select is populated).
+  Promise.resolve().then(() => {
+    if (sale.v) {
+      const cfg = VARIANT_CONFIG[sale.m];
+      if (cfg) {
+        const val = sale.v[cfg.key];
+        if (val !== undefined) variantTS.setValue(String(val), false);
+      }
+    }
+    if (sale.e && Object.keys(sale.e).length) {
+      enchantTS.clear(true);
+      for (const [k, v] of Object.entries(sale.e)) {
+        enchantTS.addItem(`${k}:${v}`, true);
+      }
+    }
+    analyze();
+    $("section-market").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 init();
