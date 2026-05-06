@@ -71,7 +71,7 @@ const STRINGS = {
     "ui.theme": "Changer de thème",
     "ui.lang": "Langue",
     "ui.net": "Net",
-    "ui.net.tip": "Affiche les prix nets de la taxe HDV (10%)",
+    "ui.net.tip": "Net = ce que reçoit le vendeur. Décoche pour voir le prix listé (incluant la taxe HDV de 10%).",
     "liquidity.tier.1": "🔥 Très liquide",
     "liquidity.tier.2": "⚡ Liquide",
     "liquidity.tier.3": "✓ Marché actif",
@@ -197,7 +197,7 @@ const STRINGS = {
     "ui.theme": "Toggle theme",
     "ui.lang": "Language",
     "ui.net": "Net",
-    "ui.net.tip": "Show prices net of the 10% auction-house tax",
+    "ui.net.tip": "Net = seller's receipt. Uncheck to see the listed price (including the 10% AH tax).",
     "liquidity.tier.1": "🔥 Very liquid",
     "liquidity.tier.2": "⚡ Liquid",
     "liquidity.tier.3": "✓ Active market",
@@ -288,16 +288,19 @@ function fmtPriceRound(n) {
   return fmtPrice(Math.round(n));
 }
 
-// Auction-house tax. Plugin config (zAuctionHouseV3 config.yml) declares a
-// global PURCHASE tax of 10%. When the toggle is on, every numeric price is
-// scaled by (1 - TAX_RATE) BEFORE display/aggregation so the user sees what
-// they'd actually pocket. Applied at the data layer (unitPrice + raw s.p
-// reads) so chart axes get round numbers, not at format time.
+// Auction-house tax. Plugin config declares 10%. Verified empirically by
+// listing an item at 100 and checking the DB row: stored value was 90, i.e.
+// the BDD already stores the seller's NET receipt (post-tax). So:
+//   - Net mode (default): show the BDD value as-is — what the seller pockets.
+//   - Net off: divide by (1 - TAX_RATE) to reconstruct the listed/gross
+//     price (what `/ah` shows and what the buyer pays).
+// Applied at the data layer (unitPrice + raw s.p reads) so chart axes get
+// round numbers, not at format time.
 const TAX_RATE = 0.10;
 let applyTax = localStorage.getItem("apply_tax") !== "false"; // default on
 
 function effectivePrice(p) {
-  return applyTax ? p * (1 - TAX_RATE) : p;
+  return applyTax ? p : p / (1 - TAX_RATE);
 }
 
 function fmtDate(ts) {
