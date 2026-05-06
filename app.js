@@ -1923,9 +1923,7 @@ function renderPersonalBreakdown(sales) {
   const block = $("personal-breakdown");
   const rows = buildPersonalBreakdown(sales).sort(personalBreakdownComparator);
 
-  // Hide when there's only one signature — the breakdown wouldn't add info
-  // beyond what the summary cards already say.
-  if (rows.length <= 1) {
+  if (!rows.length) {
     block.hidden = true;
     return;
   }
