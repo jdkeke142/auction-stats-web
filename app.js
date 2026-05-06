@@ -1802,10 +1802,12 @@ function renderPersonalPagination(totalPages) {
     return;
   }
   pag.hidden = false;
+  const prevLabel = t("personal.pagination.prev");
+  const nextLabel = t("personal.pagination.next");
   pag.innerHTML = `
-    <button type="button" class="btn btn-sm btn-outline-secondary" id="personal-prev" ${personalPage === 0 ? "disabled" : ""}>${t("personal.pagination.prev")}</button>
+    <button type="button" class="pagination-btn" id="personal-prev" aria-label="${escapeHtml(prevLabel)}" title="${escapeHtml(prevLabel)}" ${personalPage === 0 ? "disabled" : ""}>‹</button>
     <span class="text-secondary">${t("personal.pagination.range", personalPage + 1, totalPages)}</span>
-    <button type="button" class="btn btn-sm btn-outline-secondary" id="personal-next" ${personalPage >= totalPages - 1 ? "disabled" : ""}>${t("personal.pagination.next")}</button>
+    <button type="button" class="pagination-btn" id="personal-next" aria-label="${escapeHtml(nextLabel)}" title="${escapeHtml(nextLabel)}" ${personalPage >= totalPages - 1 ? "disabled" : ""}>›</button>
   `;
   $("personal-prev")?.addEventListener("click", () => {
     personalPage--;
