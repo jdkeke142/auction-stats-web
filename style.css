@@ -172,9 +172,11 @@
 .liquidity-tier-4 { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
 .liquidity-tier-5 { background: var(--bs-danger-bg-subtle);  color: var(--bs-danger-text-emphasis); }
 
-/* Breakdown table: keep every row's last cell padded so the median price
-   column stays aligned whether the row is clickable (chevron) or not. */
-#breakdown-tbody td:last-child {
+/* Breakdown tables (Marché + Par joueur): keep every row's last cell padded
+   so the median price column stays aligned whether the row is clickable
+   (chevron) or not. */
+#breakdown-tbody td:last-child,
+#personal-breakdown-tbody td:last-child {
   position: relative;
   padding-right: 2.25rem;
 }
