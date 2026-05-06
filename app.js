@@ -10,7 +10,7 @@ const STRINGS = {
     "title.brand": "Prix HDV",
     "title.suffix": "— Dynastia",
     "tab.market": "Marché",
-    "tab.personal": "Mes ventes",
+    "tab.personal": "Par joueur",
     "personal.player_label": "Joueur",
     "personal.player_placeholder": "Choisir un joueur…",
     "personal.player_no_results": "Aucun joueur trouvé",
@@ -19,7 +19,7 @@ const STRINGS = {
     "personal.summary.total": "Total revenu",
     "personal.summary.count": "Ventes",
     "personal.summary.median": "Médiane unitaire",
-    "personal.table.heading": "Mes ventes",
+    "personal.table.heading": "Ventes",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
     "personal.table.col.qty": "Qté",
@@ -123,7 +123,7 @@ const STRINGS = {
     "title.brand": "Auction Prices",
     "title.suffix": "— Dynastia",
     "tab.market": "Market",
-    "tab.personal": "My sales",
+    "tab.personal": "Per player",
     "personal.player_label": "Player",
     "personal.player_placeholder": "Pick a player…",
     "personal.player_no_results": "No player found",
@@ -132,7 +132,7 @@ const STRINGS = {
     "personal.summary.total": "Total revenue",
     "personal.summary.count": "Sales",
     "personal.summary.median": "Unit median",
-    "personal.table.heading": "My sales",
+    "personal.table.heading": "Sales",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
     "personal.table.col.qty": "Qty",
@@ -268,6 +268,10 @@ function fmtTime(ts) {
     lang === "fr" ? "fr-FR" : "en-US",
     { hour: "2-digit", minute: "2-digit" },
   );
+}
+
+function fmtDateTime(ts) {
+  return `${fmtDate(ts)} · ${fmtTime(ts)}`;
 }
 
 // ===========================================================================
@@ -466,7 +470,12 @@ function applyLang() {
   // labels switch language too.
   if (personalPlayerTS) rebuildPersonalPlayerOptions();
   if (personalItemFilterTS) rebuildPersonalItemFilter();
-  if (personalPlayer && DATA) runPersonalAnalysis();
+  if (personalPlayer && DATA) {
+    const personalItem = personalItemFilterTS && personalItemFilterTS.getValue();
+    updatePersonalVariantForItem(personalItem);
+    updatePersonalEnchantsForItem(personalItem);
+    runPersonalAnalysis();
+  }
 }
 
 // ===========================================================================
@@ -496,6 +505,8 @@ async function init() {
   initVariantDropdown();
   initEnchantDropdown();
   initPersonalPlayerPicker();
+  initPersonalVariantDropdown();
+  initPersonalEnchantDropdown();
   initPersonalItemFilter();
   initModeTabs();
   applyLang(); // refresh meta line + Tom-Select renderings now that DATA is loaded
@@ -514,6 +525,9 @@ async function init() {
   // doesn't fire onChange — render results explicitly.
   if (personalPlayer) {
     rebuildPersonalItemFilter();
+    const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
+    updatePersonalVariantForItem(itemFilter);
+    updatePersonalEnchantsForItem(itemFilter);
     runPersonalAnalysis();
   }
 }
@@ -1314,6 +1328,8 @@ function initModeTabs() {
 let personalPlayer = null;
 let personalPlayerTS = null;
 let personalItemFilterTS = null;
+let personalVariantTS = null;
+let personalEnchantTS = null;
 let personalPage = 0;
 const PERSONAL_PAGE_SIZE = 50;
 
@@ -1345,6 +1361,11 @@ function initPersonalPlayerPicker() {
       else localStorage.removeItem("personal_player");
       personalPage = 0;
       rebuildPersonalItemFilter();
+      // Item filter resets to "" → variant/enchant blocks hide automatically
+      // via updatePersonal* below (called from rebuildPersonalItemFilter via
+      // its own onChange). Belt + suspenders here:
+      $("personal-variant-block").hidden = true;
+      hidePersonalEnchants();
       runPersonalAnalysis();
     },
   });
@@ -1404,12 +1425,188 @@ function initPersonalItemFilter() {
       item: (data, escape) => `<div>${escape(data.text)}</div>`,
       no_results: () => `<div class="no-results">${t("item_no_results")}</div>`,
     },
+    onChange: (val) => {
+      personalPage = 0;
+      updatePersonalVariantForItem(val);
+      updatePersonalEnchantsForItem(val);
+      runPersonalAnalysis();
+    },
+  });
+  rebuildPersonalItemFilter();
+}
+
+function initPersonalVariantDropdown() {
+  personalVariantTS = new TomSelect("#personal-variant", {
+    options: [],
+    valueField: "value",
+    labelField: "text",
+    searchField: ["text", "value"],
+    maxOptions: 100,
+    create: false,
+    sortField: { field: "$order" },
+    render: {
+      option: (data, escape) => `<div>${escape(data.text)}</div>`,
+      item: (data, escape) => `<div>${escape(data.text)}</div>`,
+      no_results: () => `<div class="no-results">${t("variant_no_results")}</div>`,
+    },
     onChange: () => {
       personalPage = 0;
       runPersonalAnalysis();
     },
   });
-  rebuildPersonalItemFilter();
+}
+
+function initPersonalEnchantDropdown() {
+  personalEnchantTS = new TomSelect("#personal-enchants", {
+    options: [],
+    optgroups: [],
+    valueField: "value",
+    labelField: "text",
+    optgroupField: "group",
+    optgroupLabelField: "label",
+    optgroupValueField: "value",
+    searchField: ["text", "value"],
+    plugins: ["remove_button"],
+    maxItems: null,
+    maxOptions: 300,
+    sortField: { field: "$order" },
+    render: {
+      option: (data, escape) => `<div>${escape(data.text)}</div>`,
+      item: (data, escape) => `<div>${escape(data.text)}</div>`,
+      optgroup_header: (data, escape) =>
+        `<div class="optgroup-header">${escape(data.label)}</div>`,
+      no_results: () => `<div class="no-results">${t("enchant_no_results")}</div>`,
+    },
+    onChange: () => {
+      personalPage = 0;
+      runPersonalAnalysis();
+    },
+  });
+}
+
+// Mirror of updateVariantForItem but scoped to the selected player + period.
+function updatePersonalVariantForItem(material) {
+  const cfg = VARIANT_CONFIG[material];
+  if (!personalVariantTS) return;
+  personalVariantTS.clear(true);
+  personalVariantTS.clearOptions();
+
+  if (!cfg || !personalPlayer) {
+    $("personal-variant-block").hidden = true;
+    return;
+  }
+
+  const { fromTs, toTs } = getCurrentPeriod("personal");
+  const counts = new Map();
+  for (const s of DATA.sales) {
+    if (s.s !== personalPlayer) continue;
+    if (s.m !== material) continue;
+    if (s.t < fromTs || s.t > toTs) continue;
+    const v = s.v && s.v[cfg.key];
+    if (v === undefined) continue;
+    counts.set(v, (counts.get(v) || 0) + 1);
+  }
+
+  if (counts.size === 0) {
+    $("personal-variant-block").hidden = true;
+    return;
+  }
+
+  $("personal-variant-label").textContent = t(cfg.labelKey);
+  $("personal-variant-block").hidden = false;
+  personalVariantTS.settings.placeholder = t(cfg.placeholderKey);
+  personalVariantTS.addOption({ value: "", text: t(cfg.placeholderKey) });
+  for (const [val, cnt] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
+    personalVariantTS.addOption({
+      value: String(val),
+      text: `${cfg.formatValue(val)}  (${fmt.format(cnt)})`,
+    });
+  }
+  personalVariantTS.refreshOptions(false);
+  personalVariantTS.setValue("", true);
+  syncTSPlaceholder(personalVariantTS);
+}
+
+function getSelectedPersonalVariant(material) {
+  const cfg = VARIANT_CONFIG[material];
+  if (!cfg || !personalVariantTS) return null;
+  const v = personalVariantTS.getValue();
+  if (!v) return null;
+  return cfg.key === "flight"
+    ? { key: cfg.key, value: parseInt(v, 10) }
+    : { key: cfg.key, value: v };
+}
+
+function hidePersonalEnchants() {
+  if (!personalEnchantTS) return;
+  personalEnchantTS.clear(true);
+  personalEnchantTS.clearOptions();
+  personalEnchantTS.clearOptionGroups();
+  $("personal-enchants-block").hidden = true;
+}
+
+function updatePersonalEnchantsForItem(material) {
+  if (!personalEnchantTS) return;
+  if (!material || !materialIsEnchantable.has(material) || !personalPlayer) {
+    return hidePersonalEnchants();
+  }
+
+  const { fromTs, toTs } = getCurrentPeriod("personal");
+  const ench = new Map();
+  for (const s of DATA.sales) {
+    if (s.s !== personalPlayer) continue;
+    if (s.m !== material) continue;
+    if (s.t < fromTs || s.t > toTs) continue;
+    for (const [k, v] of Object.entries(s.e)) {
+      ench.set(enchKey(k, v), (ench.get(enchKey(k, v)) || 0) + 1);
+    }
+  }
+  if (ench.size === 0) return hidePersonalEnchants();
+
+  const previouslySelected = personalEnchantTS.getValue();
+  personalEnchantTS.clear(true);
+  personalEnchantTS.clearOptions();
+  personalEnchantTS.clearOptionGroups();
+
+  const byBase = new Map();
+  for (const [pair, count] of ench) {
+    const [base, lvl] = parseEnchKey(pair);
+    if (!byBase.has(base)) byBase.set(base, []);
+    byBase.get(base).push({ lvl, count, pair });
+  }
+  const sortedBases = [...byBase.entries()].sort((a, b) =>
+    enchBaseName(a[0]).localeCompare(enchBaseName(b[0])),
+  );
+  for (const [base, lvls] of sortedBases) {
+    personalEnchantTS.addOptionGroup(base, { value: base, label: enchBaseName(base) });
+    for (const { lvl, count, pair } of lvls.sort((a, b) => a.lvl - b.lvl)) {
+      personalEnchantTS.addOption({
+        value: pair,
+        text: `${enchLabel(base, lvl)}  (${fmt.format(count)})`,
+        group: base,
+      });
+    }
+  }
+  personalEnchantTS.refreshOptions(false);
+
+  $("personal-enchants-block").hidden = false;
+  personalEnchantTS.settings.placeholder = t("enchant_placeholder");
+  personalEnchantTS.enable();
+  syncTSPlaceholder(personalEnchantTS);
+
+  for (const v of previouslySelected) {
+    if (ench.has(v)) personalEnchantTS.addItem(v, true);
+  }
+}
+
+function getSelectedPersonalEnchants() {
+  if (!personalEnchantTS) return {};
+  const out = {};
+  for (const v of personalEnchantTS.getValue()) {
+    const [k, lvl] = parseEnchKey(v);
+    out[k] = lvl;
+  }
+  return out;
 }
 
 function rebuildPersonalItemFilter() {
@@ -1454,6 +1651,10 @@ function rebuildPersonalItemFilter() {
 function onPersonalPeriodChange() {
   syncPeriodPresetButtons("personal");
   rebuildPersonalItemFilter();
+  // Variant/enchant counts shift with the period; refresh them too.
+  const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
+  updatePersonalVariantForItem(itemFilter);
+  updatePersonalEnchantsForItem(itemFilter);
   personalPage = 0;
   runPersonalAnalysis();
 }
@@ -1488,12 +1689,16 @@ function runPersonalAnalysis() {
 
   const { fromTs, toTs } = getCurrentPeriod("personal");
   const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
+  const variant = itemFilter ? getSelectedPersonalVariant(itemFilter) : null;
+  const ench = itemFilter ? getSelectedPersonalEnchants() : {};
   const sales = DATA.sales.filter(
     (s) =>
       s.s === personalPlayer &&
       s.t >= fromTs &&
       s.t <= toTs &&
-      (!itemFilter || s.m === itemFilter),
+      (!itemFilter || s.m === itemFilter) &&
+      matchesVariant(s, variant) &&
+      matchesEnchants(s.e, ench, false),
   );
 
   if (!sales.length) {
@@ -1541,7 +1746,7 @@ function renderPersonalTable(sales) {
     const tr = document.createElement("tr");
     const buyerName = sale.b ? (DATA.players[sale.b] || sale.b.slice(0, 8)) : null;
     tr.innerHTML = `
-      <td>${escapeHtml(fmtDate(sale.t))}</td>
+      <td class="text-nowrap">${escapeHtml(fmtDateTime(sale.t))}</td>
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
       <td class="text-end font-monospace">${fmt.format(Math.round(unitPrice(sale)))}</td>

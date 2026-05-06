@@ -38,7 +38,7 @@
       <button class="nav-link active" data-mode="market" type="button" role="tab" data-i18n="tab.market">Marché</button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" data-mode="personal" type="button" role="tab" data-i18n="tab.personal">Mes ventes</button>
+      <button class="nav-link" data-mode="personal" type="button" role="tab" data-i18n="tab.personal">Par joueur</button>
     </li>
   </ul>
 
@@ -229,6 +229,22 @@
             <select id="personal-item-filter" class="form-select"></select>
           </div>
 
+          <div id="personal-variant-block" hidden>
+            <label for="personal-variant" class="form-label fw-medium">
+              <span id="personal-variant-label">Variante</span>
+              <span class="text-secondary fw-normal" data-i18n="form.optional">(optionnel)</span>
+            </label>
+            <select id="personal-variant" class="form-select"></select>
+          </div>
+
+          <div id="personal-enchants-block" hidden>
+            <label for="personal-enchants" class="form-label fw-medium">
+              <span data-i18n="form.enchants">Enchantements</span>
+              <span class="text-secondary fw-normal" data-i18n="form.optional">(optionnel)</span>
+            </label>
+            <select id="personal-enchants" class="form-select" multiple></select>
+          </div>
+
         </form>
       </div>
     </div>
@@ -263,7 +279,7 @@
       </div>
 
       <div class="card shadow-sm mb-4">
-        <div class="card-header bg-body fw-semibold" data-i18n="personal.table.heading">Mes ventes</div>
+        <div class="card-header bg-body fw-semibold" data-i18n="personal.table.heading">Ventes</div>
         <div class="table-responsive">
           <table class="table mb-0 align-middle">
             <thead id="personal-thead"></thead>
