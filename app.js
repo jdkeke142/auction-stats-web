@@ -70,8 +70,8 @@ const STRINGS = {
     "empty.default": "Aucune vente trouvée pour ces critères.",
     "ui.theme": "Changer de thème",
     "ui.lang": "Langue",
-    "ui.net": "Net",
-    "ui.net.tip": "Net = ce que reçoit le vendeur. Décoche pour voir le prix listé (incluant la taxe HDV de 10%).",
+    "ui.gross": "brut",
+    "ui.gross.help": "Le grand chiffre = net (ce que reçoit le vendeur). Le petit chiffre = brut (prix listé dans /ah, incluant la taxe HDV de 10%).",
     "liquidity.tier.1": "🔥 Très liquide",
     "liquidity.tier.2": "⚡ Liquide",
     "liquidity.tier.3": "✓ Marché actif",
@@ -196,8 +196,8 @@ const STRINGS = {
     "empty.default": "No sales match these criteria.",
     "ui.theme": "Toggle theme",
     "ui.lang": "Language",
-    "ui.net": "Net",
-    "ui.net.tip": "Net = seller's receipt. Uncheck to see the listed price (including the 10% AH tax).",
+    "ui.gross": "gross",
+    "ui.gross.help": "Big number = net (seller's receipt). Small number = gross (the listed price in /ah, including the 10% auction-house tax).",
     "liquidity.tier.1": "🔥 Very liquid",
     "liquidity.tier.2": "⚡ Liquid",
     "liquidity.tier.3": "✓ Active market",
@@ -290,17 +290,18 @@ function fmtPriceRound(n) {
 
 // Auction-house tax. Plugin config declares 10%. Verified empirically by
 // listing an item at 100 and checking the DB row: stored value was 90, i.e.
-// the BDD already stores the seller's NET receipt (post-tax). So:
-//   - Net mode (default): show the BDD value as-is — what the seller pockets.
-//   - Net off: divide by (1 - TAX_RATE) to reconstruct the listed/gross
-//     price (what `/ah` shows and what the buyer pays).
-// Applied at the data layer (unitPrice + raw s.p reads) so chart axes get
-// round numbers, not at format time.
+// the BDD already stores the seller's NET receipt (post-tax). So we treat
+// every `s.p` as net and reconstruct the listed/gross price on demand
+// (what `/ah` shows + what the buyer pays).
 const TAX_RATE = 0.10;
-let applyTax = localStorage.getItem("apply_tax") !== "false"; // default on
+const grossPrice = (net) => net / (1 - TAX_RATE);
 
-function effectivePrice(p) {
-  return applyTax ? p : p / (1 - TAX_RATE);
+// Compact secondary "brut" line for table cells (stacked under the net price).
+function fmtBrutSubcell(net) {
+  return `<div class="text-secondary small opacity-75 mt-1">${fmtPrice(grossPrice(net))} ${t("ui.gross")}</div>`;
+}
+function fmtBrutSubcellRound(net) {
+  return `<div class="text-secondary small opacity-75 mt-1">${fmtPriceRound(grossPrice(net))} ${t("ui.gross")}</div>`;
 }
 
 function fmtDate(ts) {
@@ -577,16 +578,6 @@ async function init() {
     runPersonalAnalysis();
   });
   $("personal-reset").addEventListener("click", resetPersonalForm);
-
-  // Net-price toggle: re-render whichever results section is currently shown.
-  const netToggle = $("net-prices");
-  netToggle.checked = applyTax;
-  netToggle.addEventListener("change", () => {
-    applyTax = netToggle.checked;
-    localStorage.setItem("apply_tax", String(applyTax));
-    if (!$("results").hidden) analyze();
-    if (!$("personal-results").hidden) runPersonalAnalysis();
-  });
   $("form").addEventListener("submit", (e) => {
     e.preventDefault();
     analyze();
@@ -1038,7 +1029,8 @@ function isStrictMode() {
   return !!(cb && cb.checked);
 }
 
-const unitPrice = (s) => effectivePrice(s.p) / Math.max(1, s.a);
+// `s.p` is net (DB stores post-tax). Per-unit also stays net.
+const unitPrice = (s) => s.p / Math.max(1, s.a);
 
 // Convert a duration in milliseconds into a localized human label
 // (rounded to a sensible unit for the magnitude).
@@ -1159,7 +1151,7 @@ function showBreakdown(item, sales) {
     tr.innerHTML = `
       <td>${g.label}</td>
       <td class="text-end font-monospace">${fmt.format(g.sales.length)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(med)}</td>`;
+      <td class="text-end font-monospace">${fmtPriceRound(med)}${fmtBrutSubcellRound(med)}</td>`;
     if (g.filter) {
       tr.addEventListener("click", () => applyBreakdownFilter(g.filter));
     }
@@ -1229,9 +1221,13 @@ function analyze() {
   const quantities = sales.map((s) => s.a).sort((a, b) => a - b);
   const medianQty = quantile(quantities, 0.5);
 
+  const grossLabel = t("ui.gross");
   $("reco-fast").textContent = fmtPriceRound(q1);
   $("reco-fair").textContent = fmtPriceRound(median);
-  $("reco-max").textContent = fmtPriceRound(q3);
+  $("reco-max").textContent  = fmtPriceRound(q3);
+  $("reco-fast-brut").textContent = `${fmtPriceRound(grossPrice(q1))} ${grossLabel}`;
+  $("reco-fair-brut").textContent = `${fmtPriceRound(grossPrice(median))} ${grossLabel}`;
+  $("reco-max-brut").textContent  = `${fmtPriceRound(grossPrice(q3))} ${grossLabel}`;
 
   showLiquidity(perDay);
   showBreakdown(item, sales);
@@ -1240,7 +1236,7 @@ function analyze() {
     [t("stats_n_sales"), fmt.format(sales.length)],
     [t("stats_pace"), t("stats_pace_value", perDay.toFixed(1))],
     [t("stats_qty_median"), t("stats_qty_value", Math.round(medianQty))],
-    [t("stats_avg"), fmtPriceRound(avg)],
+    [t("stats_avg"), `${fmtPriceRound(avg)} <span class="text-secondary fw-normal opacity-75 small ms-2">${fmtPriceRound(grossPrice(avg))} ${t("ui.gross")}</span>`],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
 
   const ratio = avg / median;
@@ -1378,7 +1374,8 @@ function buildChartOptions(medianData, rangeData, counts) {
         return `
           <div style="padding:.5rem .75rem;font-family:inherit">
             <div style="font-weight:600;font-size:.8rem;color:${axisColor};margin-bottom:.25rem">${fmtDate(x)}</div>
-            <div style="margin-bottom:.25rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(med)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("chart_tt_label")}</span></div>
+            <div style="margin-bottom:.15rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(med)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("chart_tt_label")}</span></div>
+            <div style="color:${axisColor};font-size:.8rem;margin-bottom:.25rem;opacity:.75">${fmtPrice(grossPrice(med))} ${t("ui.gross")}</div>
             <div style="font-size:.85rem;color:${axisColor}">${t("chart_tt_range", low, high)}</div>
             <div style="font-size:.85rem;color:${axisColor}">${t("chart_tt_n_sales", c)}</div>
           </div>`;
@@ -1442,7 +1439,7 @@ function getPersonalSortValue(sale, key) {
     case "item":  return formatSaleLabel(sale).toLowerCase();
     case "a":     return sale.a;
     case "unit":  return unitPrice(sale);
-    case "total": return effectivePrice(sale.p);
+    case "total": return sale.p;
     case "buyer": return (sale.b ? (DATA.players[sale.b] || sale.b) : "").toLowerCase();
     default:      return 0;
   }
@@ -1845,12 +1842,15 @@ function runPersonalAnalysis() {
   $("personal-empty").hidden = true;
   $("personal-results").hidden = false;
 
-  const total = sales.reduce((acc, s) => acc + effectivePrice(s.p), 0);
+  const total = sales.reduce((acc, s) => acc + s.p, 0);
   const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
   const median = quantile(unitPrices, 0.5);
+  const grossLbl = t("ui.gross");
   $("personal-total").textContent = fmtPrice(total);
+  $("personal-total-brut").textContent = `${fmtPrice(grossPrice(total))} ${grossLbl}`;
   $("personal-count").textContent = fmt.format(sales.length);
   $("personal-median").textContent = fmtPriceRound(median);
+  $("personal-median-brut").textContent = `${fmtPriceRound(grossPrice(median))} ${grossLbl}`;
 
   const sorted = sales.slice().sort(personalSortComparator);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PERSONAL_PAGE_SIZE));
@@ -1881,7 +1881,7 @@ function buildPersonalBreakdown(sales) {
     groups.get(sig).sales.push(s);
   }
   return [...groups.values()].map((g) => {
-    const total = g.sales.reduce((acc, s) => acc + effectivePrice(s.p), 0);
+    const total = g.sales.reduce((acc, s) => acc + s.p, 0);
     const unitPrices = g.sales.map(unitPrice).sort((a, b) => a - b);
     return {
       sample: g.sample,
@@ -1958,8 +1958,8 @@ function renderPersonalBreakdown(sales) {
     tr.innerHTML = `
       <td>${escapeHtml(row.label)}</td>
       <td class="text-end font-monospace">${fmt.format(row.count)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(row.total)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(row.total)}${fmtBrutSubcellRound(row.total)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}${fmtBrutSubcellRound(row.medianUnit)}</td>
     `;
     tr.addEventListener("click", () => switchToMarketWithSale(row.sample));
     tbody.appendChild(tr);
@@ -1987,7 +1987,7 @@ function drawPersonalChart(salesAsc) {
 
   let cumul = 0;
   const data = chrono.map((s) => {
-    cumul += effectivePrice(s.p);
+    cumul += s.p;
     return { x: s.t, y: cumul };
   });
 
@@ -2043,7 +2043,8 @@ function buildPersonalChartOptions(data) {
         return `
           <div style="padding:.5rem .75rem;font-family:inherit">
             <div style="font-weight:600;font-size:.8rem;color:${axisColor};margin-bottom:.25rem">${fmtDateTime(point.x)}</div>
-            <div><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(point.y)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("personal.chart.legend")}</span></div>
+            <div style="margin-bottom:.15rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(point.y)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("personal.chart.legend")}</span></div>
+            <div style="color:${axisColor};font-size:.8rem;opacity:.75">${fmtPrice(grossPrice(point.y))} ${t("ui.gross")}</div>
           </div>`;
       },
     },
@@ -2080,8 +2081,8 @@ function renderPersonalTable(sales) {
       <td class="text-nowrap">${escapeHtml(fmtDateTime(sale.t))}</td>
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}</td>
-      <td class="text-end font-monospace">${fmtPrice(effectivePrice(sale.p))}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}${fmtBrutSubcellRound(unitPrice(sale))}</td>
+      <td class="text-end font-monospace">${fmtPrice(sale.p)}${fmtBrutSubcell(sale.p)}</td>
       <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
     tr.querySelector(".personal-item-link")?.addEventListener("click", (e) => {

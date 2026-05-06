@@ -19,10 +19,6 @@
     </a>
     <div class="d-flex align-items-center gap-3">
       <span class="text-secondary small d-none d-md-inline" id="meta">chargement…</span>
-      <div class="form-check form-switch d-flex align-items-center mb-0 mt-0" data-i18n-title="ui.net.tip">
-        <input class="form-check-input" type="checkbox" id="net-prices" role="switch">
-        <label class="form-check-label small ms-2" for="net-prices" data-i18n="ui.net">Net</label>
-      </div>
       <select id="lang-select" class="form-select form-select-sm w-auto" data-i18n-title="ui.lang" aria-label="Langue">
         <option value="fr">FR</option>
         <option value="en">EN</option>
@@ -130,7 +126,8 @@
         <div class="card h-100 bg-success-subtle border-success-subtle">
           <div class="card-body text-center">
             <div class="text-success-emphasis text-uppercase small fw-semibold mb-2" data-i18n="reco.fast">Vendre vite</div>
-            <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-success-emphasis" id="reco-fast">—</div>
+            <div class="fs-2 fw-bold lh-1 font-monospace text-success-emphasis" id="reco-fast">—</div>
+            <div class="small text-success-emphasis opacity-50 font-monospace mb-2" id="reco-fast-brut">—</div>
             <div class="small text-success-emphasis opacity-75" data-i18n="reco.fast.sub">25% des ventes en dessous</div>
           </div>
         </div>
@@ -139,7 +136,8 @@
         <div class="card h-100 bg-primary-subtle border-primary-subtle">
           <div class="card-body text-center">
             <div class="text-primary-emphasis text-uppercase small fw-semibold mb-2" data-i18n="reco.fair">Prix juste</div>
-            <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-primary-emphasis" id="reco-fair">—</div>
+            <div class="fs-2 fw-bold lh-1 font-monospace text-primary-emphasis" id="reco-fair">—</div>
+            <div class="small text-primary-emphasis opacity-50 font-monospace mb-2" id="reco-fair-brut">—</div>
             <div class="small text-primary-emphasis opacity-75" data-i18n="reco.fair.sub">Au milieu du marché</div>
           </div>
         </div>
@@ -148,7 +146,8 @@
         <div class="card h-100 bg-warning-subtle border-warning-subtle">
           <div class="card-body text-center">
             <div class="text-warning-emphasis text-uppercase small fw-semibold mb-2" data-i18n="reco.max">Patient (max)</div>
-            <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-warning-emphasis" id="reco-max">—</div>
+            <div class="fs-2 fw-bold lh-1 font-monospace text-warning-emphasis" id="reco-max">—</div>
+            <div class="small text-warning-emphasis opacity-50 font-monospace mb-2" id="reco-max-brut">—</div>
             <div class="small text-warning-emphasis opacity-75" data-i18n="reco.max.sub">75% des ventes en dessous</div>
           </div>
         </div>
@@ -272,7 +271,8 @@
           <div class="card h-100 bg-success-subtle border-success-subtle">
             <div class="card-body text-center">
               <div class="text-success-emphasis text-uppercase small fw-semibold mb-2" data-i18n="personal.summary.total">Total revenu</div>
-              <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-success-emphasis" id="personal-total">—</div>
+              <div class="fs-2 fw-bold lh-1 font-monospace text-success-emphasis" id="personal-total">—</div>
+              <div class="small text-success-emphasis opacity-50 font-monospace" id="personal-total-brut">—</div>
             </div>
           </div>
         </div>
@@ -288,7 +288,8 @@
           <div class="card h-100 bg-primary-subtle border-primary-subtle">
             <div class="card-body text-center">
               <div class="text-primary-emphasis text-uppercase small fw-semibold mb-2" data-i18n="personal.summary.median">Médiane unitaire</div>
-              <div class="fs-2 fw-bold lh-1 mb-2 font-monospace text-primary-emphasis" id="personal-median">—</div>
+              <div class="fs-2 fw-bold lh-1 font-monospace text-primary-emphasis" id="personal-median">—</div>
+              <div class="small text-primary-emphasis opacity-50 font-monospace" id="personal-median-brut">—</div>
             </div>
           </div>
         </div>
