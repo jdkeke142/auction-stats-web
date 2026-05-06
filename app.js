@@ -249,6 +249,19 @@ function rebuildFormatters() {
   fmt = new Intl.NumberFormat(lang === "fr" ? "fr-FR" : "en-US");
 }
 
+// In-game currency affix. The server uses a generic "$" today; to swap units
+// (€, ⛁, "coins", etc.) change these two constants — every price-displaying
+// site goes through fmtPrice() (reco cards, chart axes/tooltips, stats table,
+// breakdown rows, personal view).
+const CURRENCY_PREFIX = "$";
+const CURRENCY_SUFFIX = "";
+function fmtPrice(n) {
+  return `${CURRENCY_PREFIX}${fmt.format(n)}${CURRENCY_SUFFIX}`;
+}
+function fmtPriceRound(n) {
+  return fmtPrice(Math.round(n));
+}
+
 function fmtDate(ts) {
   return new Date(ts).toLocaleDateString(
     lang === "fr" ? "fr-FR" : "en-US",
@@ -1068,7 +1081,7 @@ function showBreakdown(item, sales) {
     tr.innerHTML = `
       <td>${g.label}</td>
       <td class="text-end font-monospace">${fmt.format(g.sales.length)}</td>
-      <td class="text-end font-monospace">${fmt.format(Math.round(med))}</td>`;
+      <td class="text-end font-monospace">${fmtPriceRound(med)}</td>`;
     if (g.filter) {
       tr.addEventListener("click", () => applyBreakdownFilter(g.filter));
     }
@@ -1136,9 +1149,9 @@ function analyze() {
   const days = Math.max(1, (toTs - fromTs) / DAY_MS);
   const perDay = sales.length / days;
 
-  $("reco-fast").textContent = fmt.format(Math.round(q1));
-  $("reco-fair").textContent = fmt.format(Math.round(median));
-  $("reco-max").textContent = fmt.format(Math.round(q3));
+  $("reco-fast").textContent = fmtPriceRound(q1);
+  $("reco-fair").textContent = fmtPriceRound(median);
+  $("reco-max").textContent = fmtPriceRound(q3);
 
   showLiquidity(perDay);
   showBreakdown(item, sales);
@@ -1146,13 +1159,13 @@ function analyze() {
   $("stats-body").innerHTML = [
     [t("stats_n_sales"), fmt.format(sales.length)],
     [t("stats_pace"), t("stats_pace_value", perDay.toFixed(1))],
-    [t("stats_avg"), fmt.format(Math.round(avg))],
+    [t("stats_avg"), fmtPriceRound(avg)],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
 
   const ratio = avg / median;
   $("avg-note").textContent =
     ratio > 1.5 || ratio < 0.7
-      ? t("avg_warning", fmt.format(Math.round(avg)), fmt.format(Math.round(median)))
+      ? t("avg_warning", fmtPriceRound(avg), fmtPriceRound(median))
       : "";
 
   drawChart(sales, fromTs, toTs);
@@ -1265,7 +1278,7 @@ function buildChartOptions(medianData, rangeData, counts) {
       tooltip: { enabled: false },
     },
     yaxis: {
-      labels: { style: { colors: axisColor, fontSize: "11px" }, formatter: (v) => fmt.format(Math.round(v)) },
+      labels: { style: { colors: axisColor, fontSize: "11px" }, formatter: (v) => fmtPriceRound(v) },
     },
     grid: { borderColor: gridColor, strokeDashArray: 3, padding: { left: 10, right: 10 } },
     legend: { show: false },
@@ -1279,12 +1292,12 @@ function buildChartOptions(medianData, rangeData, counts) {
         const x = w.config.series[0].data[dataPointIndex].x;
         const r = rangeData[dataPointIndex];
         const c = counts[dataPointIndex];
-        const low = r ? fmt.format(r.y[0]) : "—";
-        const high = r ? fmt.format(r.y[1]) : "—";
+        const low = r ? fmtPrice(r.y[0]) : "—";
+        const high = r ? fmtPrice(r.y[1]) : "—";
         return `
           <div style="padding:.5rem .75rem;font-family:inherit">
             <div style="font-weight:600;font-size:.8rem;color:${axisColor};margin-bottom:.25rem">${fmtDate(x)}</div>
-            <div style="margin-bottom:.25rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmt.format(med)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("chart_tt_label")}</span></div>
+            <div style="margin-bottom:.25rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(med)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("chart_tt_label")}</span></div>
             <div style="font-size:.85rem;color:${axisColor}">${t("chart_tt_range", low, high)}</div>
             <div style="font-size:.85rem;color:${axisColor}">${t("chart_tt_n_sales", c)}</div>
           </div>`;
@@ -1727,9 +1740,9 @@ function runPersonalAnalysis() {
   const total = sales.reduce((acc, s) => acc + s.p, 0);
   const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
   const median = quantile(unitPrices, 0.5);
-  $("personal-total").textContent = fmt.format(total);
+  $("personal-total").textContent = fmtPrice(total);
   $("personal-count").textContent = fmt.format(sales.length);
-  $("personal-median").textContent = fmt.format(Math.round(median));
+  $("personal-median").textContent = fmtPriceRound(median);
 
   const sorted = sales.slice().sort((a, b) => b.t - a.t);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PERSONAL_PAGE_SIZE));
@@ -1763,9 +1776,9 @@ function renderPersonalTable(sales) {
       <td class="text-nowrap">${escapeHtml(fmtDateTime(sale.t))}</td>
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
-      <td class="text-end font-monospace">${fmt.format(Math.round(unitPrice(sale)))}</td>
-      <td class="text-end font-monospace">${fmt.format(sale.p)}</td>
-      <td>${buyerName ? `<a href="#" class="personal-buyer-link link-secondary text-decoration-none">${escapeHtml(buyerName)}</a>` : "—"}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}</td>
+      <td class="text-end font-monospace">${fmtPrice(sale.p)}</td>
+      <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
     tr.querySelector(".personal-item-link")?.addEventListener("click", (e) => {
       e.preventDefault();

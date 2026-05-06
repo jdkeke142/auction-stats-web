@@ -240,6 +240,39 @@
   --bs-btn-active-border-color: var(--bs-primary-border-subtle);
 }
 
+/* Per-player buyer chip — same indigo-subtle hover + chevron affordance as
+   the Marché breakdown rows, scaled down to a chip so it fits inside a table
+   cell. Click → switches the player picker to that buyer. */
+.personal-buyer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--bs-border-radius);
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.personal-buyer-link::after {
+  content: "›";
+  color: var(--bs-secondary-color);
+  font-size: 1.05em;
+  line-height: 1;
+  opacity: 0.5;
+  transition: transform .15s ease, opacity .15s ease, color .15s ease;
+}
+.personal-buyer-link:hover {
+  background-color: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+}
+.personal-buyer-link:hover::after {
+  opacity: 1;
+  color: var(--bs-primary-text-emphasis);
+  transform: translateX(2px);
+}
+
 /* Inline help block — uses Bootstrap surface tokens so it follows the theme. */
 .help-box {
   background-color: var(--bs-tertiary-bg);
