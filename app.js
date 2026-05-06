@@ -35,6 +35,7 @@ const STRINGS = {
     "form.period.7d": "7 jours",
     "form.period.30d": "30 jours",
     "form.period.90d": "90 jours",
+    "form.period.1y": "1 an",
     "form.period.all": "Tout",
     "form.from": "Du",
     "form.to": "Au",
@@ -147,6 +148,7 @@ const STRINGS = {
     "form.period.7d": "7 days",
     "form.period.30d": "30 days",
     "form.period.90d": "90 days",
+    "form.period.1y": "1 year",
     "form.period.all": "All",
     "form.from": "From",
     "form.to": "To",
@@ -656,6 +658,7 @@ const PERIOD_PRESETS = [
   { id: "7",   days: 7 },
   { id: "30",  days: 30 },
   { id: "90",  days: 90 },
+  { id: "1y",  days: 365 },
   { id: "all", days: null },
 ];
 
