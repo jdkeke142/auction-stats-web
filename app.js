@@ -22,6 +22,12 @@ const STRINGS = {
     "personal.chart.heading": "Revenu cumulé sur la période",
     "personal.chart.legend": "revenu cumulé",
     "personal.chart.empty": "Pas assez de ventes pour tracer une courbe.",
+    "personal.breakdown.heading": "Top des ventes par item",
+    "personal.breakdown.explainer": "Clique une ligne pour voir le marché de cet item.",
+    "personal.breakdown.col.item": "Item",
+    "personal.breakdown.col.count": "Ventes",
+    "personal.breakdown.col.total": "Total",
+    "personal.breakdown.col.median": "Médiane u.",
     "personal.table.heading": "Ventes",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
@@ -142,6 +148,12 @@ const STRINGS = {
     "personal.chart.heading": "Cumulative revenue over the period",
     "personal.chart.legend": "cumulative revenue",
     "personal.chart.empty": "Not enough sales to draw a chart.",
+    "personal.breakdown.heading": "Top sold items",
+    "personal.breakdown.explainer": "Click a row to see the market for that item.",
+    "personal.breakdown.col.item": "Item",
+    "personal.breakdown.col.count": "Sales",
+    "personal.breakdown.col.total": "Total",
+    "personal.breakdown.col.median": "Unit median",
     "personal.table.heading": "Sales",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
@@ -619,6 +631,8 @@ function resetPersonalForm() {
   personalPage = 0;
   personalSortBy = "t";
   personalSortDir = "desc";
+  personalBreakdownSortBy = "count";
+  personalBreakdownSortDir = "desc";
   if (personalChart) {
     try { personalChart.destroy(); } catch (_) { /* noop */ }
     personalChart = null;
@@ -1415,6 +1429,8 @@ let personalChart = null;
 let personalPage = 0;
 let personalSortBy = "t";
 let personalSortDir = "desc";
+let personalBreakdownSortBy = "count";
+let personalBreakdownSortDir = "desc";
 const PERSONAL_PAGE_SIZE = 50;
 
 function getPersonalSortValue(sale, key) {
@@ -1842,9 +1858,111 @@ function runPersonalAnalysis() {
     (personalPage + 1) * PERSONAL_PAGE_SIZE,
   );
 
+  renderPersonalBreakdown(sales);
   renderPersonalTable(pageSlice);
   renderPersonalPagination(totalPages);
   drawPersonalChart(sorted);
+}
+
+function buildPersonalBreakdown(sales) {
+  // Group by full m+v+e signature so e.g. "Diamond Sword (Sharp V)" and
+  // "Diamond Sword (Sharp IV)" stay separate — each combo is its own row.
+  const groups = new Map();
+  for (const s of sales) {
+    const enchSig = Object.entries(s.e)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, l]) => `${k}:${l}`).join("+");
+    const variantSig = s.v ? JSON.stringify(s.v) : "";
+    const sig = `${s.m}|${variantSig}|${enchSig}`;
+    if (!groups.has(sig)) groups.set(sig, { sample: s, sales: [] });
+    groups.get(sig).sales.push(s);
+  }
+  return [...groups.values()].map((g) => {
+    const total = g.sales.reduce((acc, s) => acc + effectivePrice(s.p), 0);
+    const unitPrices = g.sales.map(unitPrice).sort((a, b) => a - b);
+    return {
+      sample: g.sample,
+      label: formatSaleLabel(g.sample),
+      count: g.sales.length,
+      total,
+      medianUnit: quantile(unitPrices, 0.5),
+    };
+  });
+}
+
+function getPersonalBreakdownSortValue(row, key) {
+  switch (key) {
+    case "label":  return row.label.toLowerCase();
+    case "count":  return row.count;
+    case "total":  return row.total;
+    case "median": return row.medianUnit;
+    default:       return 0;
+  }
+}
+
+function personalBreakdownComparator(a, b) {
+  const dir = personalBreakdownSortDir === "asc" ? 1 : -1;
+  const va = getPersonalBreakdownSortValue(a, personalBreakdownSortBy);
+  const vb = getPersonalBreakdownSortValue(b, personalBreakdownSortBy);
+  if (va < vb) return -1 * dir;
+  if (va > vb) return 1 * dir;
+  return 0;
+}
+
+function setPersonalBreakdownSort(key) {
+  if (personalBreakdownSortBy === key) {
+    personalBreakdownSortDir = personalBreakdownSortDir === "asc" ? "desc" : "asc";
+  } else {
+    personalBreakdownSortBy = key;
+    personalBreakdownSortDir = key === "label" ? "asc" : "desc";
+  }
+  runPersonalAnalysis();
+}
+
+function renderPersonalBreakdown(sales) {
+  const block = $("personal-breakdown");
+  const rows = buildPersonalBreakdown(sales).sort(personalBreakdownComparator);
+
+  // Hide when there's only one signature — the breakdown wouldn't add info
+  // beyond what the summary cards already say.
+  if (rows.length <= 1) {
+    block.hidden = true;
+    return;
+  }
+  block.hidden = false;
+
+  const cols = [
+    { key: "label",  i18n: "personal.breakdown.col.item" },
+    { key: "count",  i18n: "personal.breakdown.col.count",  end: true },
+    { key: "total",  i18n: "personal.breakdown.col.total",  end: true },
+    { key: "median", i18n: "personal.breakdown.col.median", end: true },
+  ];
+  $("personal-breakdown-thead").innerHTML = "<tr>" + cols.map((c) => {
+    const isActive = c.key === personalBreakdownSortBy;
+    const arrow = isActive ? (personalBreakdownSortDir === "asc" ? "↑" : "↓") : "↕";
+    const classes = ["sortable"];
+    if (isActive) classes.push("sort-active");
+    if (c.end) classes.push("text-end");
+    return `<th class="${classes.join(" ")}" data-sort="${c.key}">${escapeHtml(t(c.i18n))} <span class="sort-icon">${arrow}</span></th>`;
+  }).join("") + "</tr>";
+  for (const th of $("personal-breakdown-thead").querySelectorAll("th.sortable")) {
+    th.addEventListener("click", () => setPersonalBreakdownSort(th.dataset.sort));
+  }
+
+  const tbody = $("personal-breakdown-tbody");
+  tbody.innerHTML = "";
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    tr.classList.add("breakdown-row");
+    tr.innerHTML = `
+      <td>${escapeHtml(row.label)}</td>
+      <td class="text-end font-monospace">${fmt.format(row.count)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(row.total)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}</td>
+    `;
+    tr.addEventListener("click", () => switchToMarketWithSale(row.sample));
+    tbody.appendChild(tr);
+  }
 }
 
 function drawPersonalChart(salesAsc) {
