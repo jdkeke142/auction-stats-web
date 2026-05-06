@@ -1029,8 +1029,13 @@ function isStrictMode() {
   return !!(cb && cb.checked);
 }
 
-// `s.p` is net (DB stores post-tax). Per-unit also stays net.
-const unitPrice = (s) => s.p / Math.max(1, s.a);
+// Per-unit price the seller actually listed at (= what /ah shows). The DB
+// stores net (`s.p` is the post-tax amount the seller pocketed), so we
+// reverse the tax once here at the data layer. This makes every aggregation
+// downstream (median/q1/q3/avg, chart bins, breakdown medians) operate on
+// the same gross numbers the player thinks in — no "compute in net, convert
+// at display" detour.
+const unitPrice = (s) => grossPrice(s.p / Math.max(1, s.a));
 
 // Convert a duration in milliseconds into a localized human label
 // (rounded to a sensible unit for the magnitude).
@@ -1151,7 +1156,7 @@ function showBreakdown(item, sales) {
     tr.innerHTML = `
       <td>${g.label}</td>
       <td class="text-end font-monospace">${fmt.format(g.sales.length)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(med))}</td>`;
+      <td class="text-end font-monospace">${fmtPriceRound(med)}</td>`;
     if (g.filter) {
       tr.addEventListener("click", () => applyBreakdownFilter(g.filter));
     }
@@ -1221,11 +1226,10 @@ function analyze() {
   const quantities = sales.map((s) => s.a).sort((a, b) => a - b);
   const medianQty = quantile(quantities, 0.5);
 
-  // Per-unit prices shown as gross (matches /ah). Conversion happens at
-  // display time only — the underlying quantiles stay net for math.
-  $("reco-fast").textContent = fmtPriceRound(grossPrice(q1));
-  $("reco-fair").textContent = fmtPriceRound(grossPrice(median));
-  $("reco-max").textContent  = fmtPriceRound(grossPrice(q3));
+  // q1/median/q3 are quantiles of unitPrice() — already gross.
+  $("reco-fast").textContent = fmtPriceRound(q1);
+  $("reco-fair").textContent = fmtPriceRound(median);
+  $("reco-max").textContent  = fmtPriceRound(q3);
 
   showLiquidity(perDay);
   showBreakdown(item, sales);
@@ -1234,13 +1238,13 @@ function analyze() {
     [t("stats_n_sales"), fmt.format(sales.length)],
     [t("stats_pace"), t("stats_pace_value", perDay.toFixed(1))],
     [t("stats_qty_median"), t("stats_qty_value", Math.round(medianQty))],
-    [t("stats_avg"), fmtPriceRound(grossPrice(avg))],
+    [t("stats_avg"), fmtPriceRound(avg)],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
 
   const ratio = avg / median;
   $("avg-note").textContent =
     ratio > 1.5 || ratio < 0.7
-      ? t("avg_warning", fmtPriceRound(grossPrice(avg)), fmtPriceRound(grossPrice(median)))
+      ? t("avg_warning", fmtPriceRound(avg), fmtPriceRound(median))
       : "";
 
   drawChart(sales, fromTs, toTs);
@@ -1284,11 +1288,9 @@ function drawChart(sales, fromTs, toTs) {
   _lastChartArgs = [sales, fromTs, toTs];
   const nDays = Math.max(1, Math.ceil((toTs - fromTs) / DAY_MS));
   const byDay = Array.from({ length: nDays }, () => []);
-  // Bin gross unit prices directly so the chart axis/tooltip show /ah-style
-  // numbers without per-render conversion.
   for (const s of sales) {
     const i = Math.min(nDays - 1, Math.max(0, Math.floor((s.t - fromTs) / DAY_MS)));
-    byDay[i].push(grossPrice(unitPrice(s)));
+    byDay[i].push(unitPrice(s));
   }
 
   const minSamples = 8;
@@ -1850,7 +1852,7 @@ function runPersonalAnalysis() {
   $("personal-total").textContent = fmtPrice(total);
   $("personal-total-brut").textContent = `${fmtPrice(grossPrice(total))} ${t("ui.gross")}`;
   $("personal-count").textContent = fmt.format(sales.length);
-  $("personal-median").textContent = fmtPriceRound(grossPrice(median));
+  $("personal-median").textContent = fmtPriceRound(median);
 
   const sorted = sales.slice().sort(personalSortComparator);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PERSONAL_PAGE_SIZE));
@@ -1959,7 +1961,7 @@ function renderPersonalBreakdown(sales) {
       <td>${escapeHtml(row.label)}</td>
       <td class="text-end font-monospace">${fmt.format(row.count)}</td>
       <td class="text-end font-monospace">${fmtPriceRound(row.total)}${fmtBrutSubcellRound(row.total)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(row.medianUnit))}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}</td>
     `;
     tr.addEventListener("click", () => switchToMarketWithSale(row.sample));
     tbody.appendChild(tr);
@@ -2081,7 +2083,7 @@ function renderPersonalTable(sales) {
       <td class="text-nowrap">${escapeHtml(fmtDateTime(sale.t))}</td>
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(unitPrice(sale)))}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}</td>
       <td class="text-end font-monospace">${fmtPrice(sale.p)}${fmtBrutSubcell(sale.p)}</td>
       <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
