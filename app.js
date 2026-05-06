@@ -19,6 +19,9 @@ const STRINGS = {
     "personal.summary.total": "Total revenu",
     "personal.summary.count": "Ventes",
     "personal.summary.median": "Médiane unitaire",
+    "personal.chart.heading": "Revenu cumulé sur la période",
+    "personal.chart.legend": "revenu cumulé",
+    "personal.chart.empty": "Pas assez de ventes pour tracer une courbe.",
     "personal.table.heading": "Ventes",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
@@ -134,6 +137,9 @@ const STRINGS = {
     "personal.summary.total": "Total revenue",
     "personal.summary.count": "Sales",
     "personal.summary.median": "Unit median",
+    "personal.chart.heading": "Cumulative revenue over the period",
+    "personal.chart.legend": "cumulative revenue",
+    "personal.chart.empty": "Not enough sales to draw a chart.",
     "personal.table.heading": "Sales",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
@@ -424,6 +430,9 @@ function initTheme() {
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-bs-theme", theme);
   if (chart && _lastChartArgs) drawChart(..._lastChartArgs);
+  // Personal chart picks up theme tokens at draw time — re-run analysis to
+  // recompute with the new colors.
+  if (personalChart && personalPlayer) runPersonalAnalysis();
 }
 
 // ===========================================================================
@@ -1354,6 +1363,7 @@ let personalPlayerTS = null;
 let personalItemFilterTS = null;
 let personalVariantTS = null;
 let personalEnchantTS = null;
+let personalChart = null;
 let personalPage = 0;
 const PERSONAL_PAGE_SIZE = 50;
 
@@ -1762,6 +1772,91 @@ function runPersonalAnalysis() {
 
   renderPersonalTable(pageSlice);
   renderPersonalPagination(totalPages);
+  drawPersonalChart(sorted);
+}
+
+function drawPersonalChart(salesAsc) {
+  // salesAsc is the date-desc-sorted view; flip to chronological for cumul.
+  const chrono = salesAsc.slice().sort((a, b) => a.t - b.t);
+  if (personalChart) {
+    try { personalChart.destroy(); } catch (_) { /* noop */ }
+    personalChart = null;
+  }
+  const el = $("personal-chart");
+  el.innerHTML = "";
+
+  // Need at least 2 points to draw a meaningful curve.
+  if (chrono.length < 2) {
+    el.style.display = "none";
+    $("personal-chart-empty").classList.remove("d-none");
+    return;
+  }
+  el.style.display = "";
+  $("personal-chart-empty").classList.add("d-none");
+
+  let cumul = 0;
+  const data = chrono.map((s) => {
+    cumul += s.p;
+    return { x: s.t, y: cumul };
+  });
+
+  personalChart = new ApexCharts(el, buildPersonalChartOptions(data));
+  personalChart.render();
+}
+
+function buildPersonalChartOptions(data) {
+  const css = getComputedStyle(document.documentElement);
+  const isDark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+  const axisColor  = css.getPropertyValue("--bs-secondary-color").trim() || (isDark ? "#9ba1a6" : "#6c757d");
+  const gridColor  = css.getPropertyValue("--bs-border-color").trim()   || (isDark ? "#2a2d31" : "#eef0f3");
+  const primary    = css.getPropertyValue("--bs-primary").trim()         || "#3e63dd";
+  const valueColor = css.getPropertyValue("--bs-emphasis-color").trim()  || (isDark ? "#f0f1f3" : "#1c1c1c");
+
+  return {
+    chart: {
+      type: "area",
+      height: 320,
+      fontFamily: "inherit",
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      animations: { enabled: true, speed: 350, animateGradually: { enabled: false } },
+      background: "transparent",
+    },
+    theme: { mode: isDark ? "dark" : "light" },
+    series: [{ name: t("personal.chart.legend"), data }],
+    colors: [primary],
+    fill: {
+      type: "gradient",
+      gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100] },
+    },
+    stroke: { curve: "smooth", width: 2.5 },
+    markers: { size: 0, hover: { sizeOffset: 5 }, strokeWidth: 0 },
+    xaxis: {
+      type: "datetime",
+      labels: { datetimeUTC: false, style: { colors: axisColor, fontSize: "11px" } },
+      axisBorder: { color: gridColor },
+      axisTicks: { color: gridColor },
+      tooltip: { enabled: false },
+    },
+    yaxis: {
+      labels: { style: { colors: axisColor, fontSize: "11px" }, formatter: (v) => fmtPriceRound(v) },
+    },
+    grid: { borderColor: gridColor, strokeDashArray: 3, padding: { left: 10, right: 10 } },
+    legend: { show: false },
+    dataLabels: { enabled: false },
+    tooltip: {
+      shared: false,
+      intersect: false,
+      custom: ({ dataPointIndex, w }) => {
+        const point = w.config.series[0].data[dataPointIndex];
+        return `
+          <div style="padding:.5rem .75rem;font-family:inherit">
+            <div style="font-weight:600;font-size:.8rem;color:${axisColor};margin-bottom:.25rem">${fmtDateTime(point.x)}</div>
+            <div><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(point.y)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("personal.chart.legend")}</span></div>
+          </div>`;
+      },
+    },
+  };
 }
 
 function renderPersonalTable(sales) {
