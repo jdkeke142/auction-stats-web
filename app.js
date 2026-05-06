@@ -16,24 +16,24 @@ const STRINGS = {
     "personal.player_no_results": "Aucun joueur trouvé",
     "personal.item_filter_label": "Item",
     "personal.item_filter_placeholder": "Tous les items",
-    "personal.summary.total": "Total revenu (net)",
+    "personal.summary.total": "Total listé",
     "personal.summary.count": "Ventes",
-    "personal.summary.median": "Médiane unitaire (brut)",
-    "personal.chart.heading": "Revenu cumulé (net) sur la période",
+    "personal.summary.median": "Médiane unitaire",
+    "personal.chart.heading": "Total listé cumulé sur la période",
     "personal.chart.legend": "revenu cumulé",
     "personal.chart.empty": "Pas assez de ventes pour tracer une courbe.",
     "personal.breakdown.heading": "Top des ventes par item",
     "personal.breakdown.explainer": "Clique une ligne pour voir le marché de cet item.",
     "personal.breakdown.col.item": "Item",
     "personal.breakdown.col.count": "Ventes",
-    "personal.breakdown.col.total": "Total (net)",
-    "personal.breakdown.col.median": "Médiane u. (brut)",
+    "personal.breakdown.col.total": "Total",
+    "personal.breakdown.col.median": "Médiane u.",
     "personal.table.heading": "Ventes",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
     "personal.table.col.qty": "Qté",
-    "personal.table.col.price_unit": "Prix u. (brut)",
-    "personal.table.col.price_total": "Total (net)",
+    "personal.table.col.price_unit": "Prix u.",
+    "personal.table.col.price_total": "Total",
     "personal.table.col.buyer": "Acheteur",
     "personal.no_transactions": "Aucune vente sur la période pour ce joueur.",
     "personal.pagination.prev": "Précédent",
@@ -56,9 +56,9 @@ const STRINGS = {
     "form.analyze": "Analyser",
     "form.reset": "Réinitialiser",
     "results.heading": "À quel prix vendre&nbsp;?",
-    "results.unit": "par unité · brut",
+    "results.unit": "par unité",
     "results.help":
-      "<strong>brut</strong> = prix listé dans /ah (taxe HDV de 10% incluse). <strong>net</strong> = ce que tu reçois après la taxe. <strong>Prix juste</strong> = milieu du marché. <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché.",
+      "Tous les prix sont ceux affichés dans /ah (taxe HDV de 10% retenue à la vente — tu reçois 90% du prix listé). <strong>Prix juste</strong> = milieu du marché. <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché.",
     "reco.fast": "Vendre vite",
     "reco.fast.sub": "25% des ventes en dessous",
     "reco.fair": "Prix juste",
@@ -99,7 +99,7 @@ const STRINGS = {
     stats_pace_value: (n) => `${n} par jour`,
     stats_qty_median: "Quantité médiane",
     stats_qty_value: (n) => `${fmt.format(n)} unité${n > 1 ? "s" : ""}`,
-    stats_avg: "Prix moyen brut",
+    stats_avg: "Prix moyen",
     avg_warning: (avg, fair) =>
       `⚠️ Le prix moyen (${avg}) est très différent du prix juste (${fair}). Quelques ventes hors-norme tirent la moyenne. Fie-toi à la reco prix au-dessus.`,
     chart_series_name: "Prix juste",
@@ -124,7 +124,7 @@ const STRINGS = {
     dur_weeks: (n) => `${n} semaine${n > 1 ? "s" : ""}`,
     breakdown_col_variant: "Variante",
     breakdown_col_count: "Ventes",
-    breakdown_col_median: "Prix médian brut",
+    breakdown_col_median: "Prix médian",
     breakdown_no_ench: "Sans enchantement",
     breakdown_no_variant: "Sans variante",
     breakdown_explainer: "Clique une ligne pour pré-remplir les filtres avec cette combinaison, puis lance Analyser.",
@@ -140,24 +140,24 @@ const STRINGS = {
     "personal.player_no_results": "No player found",
     "personal.item_filter_label": "Item",
     "personal.item_filter_placeholder": "All items",
-    "personal.summary.total": "Total revenue (net)",
+    "personal.summary.total": "Total listed",
     "personal.summary.count": "Sales",
-    "personal.summary.median": "Unit median (gross)",
-    "personal.chart.heading": "Cumulative revenue (net) over the period",
+    "personal.summary.median": "Unit median",
+    "personal.chart.heading": "Cumulative listed over the period",
     "personal.chart.legend": "cumulative revenue",
     "personal.chart.empty": "Not enough sales to draw a chart.",
     "personal.breakdown.heading": "Top sold items",
     "personal.breakdown.explainer": "Click a row to see the market for that item.",
     "personal.breakdown.col.item": "Item",
     "personal.breakdown.col.count": "Sales",
-    "personal.breakdown.col.total": "Total (net)",
-    "personal.breakdown.col.median": "Unit median (gross)",
+    "personal.breakdown.col.total": "Total",
+    "personal.breakdown.col.median": "Unit median",
     "personal.table.heading": "Sales",
     "personal.table.col.date": "Date",
     "personal.table.col.item": "Item",
     "personal.table.col.qty": "Qty",
-    "personal.table.col.price_unit": "Unit (gross)",
-    "personal.table.col.price_total": "Total (net)",
+    "personal.table.col.price_unit": "Unit",
+    "personal.table.col.price_total": "Total",
     "personal.table.col.buyer": "Buyer",
     "personal.no_transactions": "No sales for this player in the selected period.",
     "personal.pagination.prev": "Previous",
@@ -180,9 +180,9 @@ const STRINGS = {
     "form.analyze": "Analyze",
     "form.reset": "Reset",
     "results.heading": "What price should I sell at?",
-    "results.unit": "per unit · gross",
+    "results.unit": "per unit",
     "results.help":
-      "<strong>gross</strong> = listed price in /ah (10% AH tax included). <strong>net</strong> = what you receive after tax. <strong>Fair price</strong> = middle of the market. <strong>Sell fast</strong> = a bit below. <strong>Patient</strong> = top of the market.",
+      "All prices are what /ah displays (10% AH tax taken at sale time — you receive 90% of the listed price). <strong>Fair price</strong> = middle of the market. <strong>Sell fast</strong> = a bit below. <strong>Patient</strong> = top of the market.",
     "reco.fast": "Sell fast",
     "reco.fast.sub": "25% of sales are below",
     "reco.fair": "Fair price",
@@ -222,7 +222,7 @@ const STRINGS = {
     stats_pace_value: (n) => `${n} per day`,
     stats_qty_median: "Median quantity",
     stats_qty_value: (n) => `${fmt.format(n)} unit${n > 1 ? "s" : ""}`,
-    stats_avg: "Avg price (gross)",
+    stats_avg: "Average price",
     avg_warning: (avg, fair) =>
       `⚠️ The average (${avg}) is far from the fair price (${fair}). A few outlier sales skew the mean. Trust the price reco above.`,
     chart_series_name: "Fair price",
@@ -247,7 +247,7 @@ const STRINGS = {
     dur_weeks: (n) => `${n} week${n > 1 ? "s" : ""}`,
     breakdown_col_variant: "Variant",
     breakdown_col_count: "Sales",
-    breakdown_col_median: "Median price (gross)",
+    breakdown_col_median: "Median price",
     breakdown_no_ench: "No enchantment",
     breakdown_no_variant: "No variant",
     breakdown_explainer: "Click a row to pre-fill the filters with that combination, then click Analyze.",
@@ -1429,7 +1429,7 @@ function getPersonalSortValue(sale, key) {
     case "item":  return formatSaleLabel(sale).toLowerCase();
     case "a":     return sale.a;
     case "unit":  return unitPrice(sale);
-    case "total": return sale.p;
+    case "total": return grossPrice(sale.p);
     case "buyer": return (sale.b ? (DATA.players[sale.b] || sale.b) : "").toLowerCase();
     default:      return 0;
   }
@@ -1835,8 +1835,10 @@ function runPersonalAnalysis() {
   const total = sales.reduce((acc, s) => acc + s.p, 0);
   const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
   const median = quantile(unitPrices, 0.5);
-  // Single-value convention: totals are net (received), per-unit is gross.
-  $("personal-total").textContent = fmtPrice(total);
+  // Single convention everywhere: prices match what /ah shows (gross). The
+  // 10% AH tax is taken at sale time — flagged once in the help-box, not
+  // sprinkled across every cell.
+  $("personal-total").textContent = fmtPrice(grossPrice(total));
   $("personal-count").textContent = fmt.format(sales.length);
   $("personal-median").textContent = fmtPriceRound(median);
 
@@ -1946,7 +1948,7 @@ function renderPersonalBreakdown(sales) {
     tr.innerHTML = `
       <td>${escapeHtml(row.label)}</td>
       <td class="text-end font-monospace">${fmt.format(row.count)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(row.total)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(row.total))}</td>
       <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}</td>
     `;
     tr.addEventListener("click", () => switchToMarketWithSale(row.sample));
@@ -1975,7 +1977,7 @@ function drawPersonalChart(salesAsc) {
 
   let cumul = 0;
   const data = chrono.map((s) => {
-    cumul += s.p;
+    cumul += grossPrice(s.p);
     return { x: s.t, y: cumul };
   });
 
@@ -2069,7 +2071,7 @@ function renderPersonalTable(sales) {
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
       <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}</td>
-      <td class="text-end font-monospace">${fmtPrice(sale.p)}</td>
+      <td class="text-end font-monospace">${fmtPrice(grossPrice(sale.p))}</td>
       <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
     tr.querySelector(".personal-item-link")?.addEventListener("click", (e) => {
