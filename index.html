@@ -193,7 +193,7 @@
 
     <div class="card shadow-sm mb-4">
       <div class="card-body">
-        <form id="personal-form" class="vstack gap-3" onsubmit="event.preventDefault()">
+        <form id="personal-form" class="vstack gap-3">
 
           <div>
             <label for="personal-player" class="form-label fw-medium" data-i18n="personal.player_label">Joueur</label>
@@ -250,6 +250,11 @@
               </label>
             </div>
             <div class="form-text" data-i18n-html="form.enchants.help">Filtre les ventes…</div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary px-4" data-i18n="form.analyze">Analyser</button>
+            <button type="button" id="personal-reset" class="btn btn-outline-secondary" data-i18n="form.reset">Réinitialiser</button>
           </div>
 
         </form>

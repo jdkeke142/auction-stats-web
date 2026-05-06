@@ -541,24 +541,25 @@ async function init() {
   $("to").addEventListener("change", onPeriodChange);
   $("personal-from").addEventListener("change", onPersonalPeriodChange);
   $("personal-to").addEventListener("change", onPersonalPeriodChange);
-  $("personal-enchants-strict").addEventListener("change", () => {
-    personalPage = 0;
+  $("personal-form").addEventListener("submit", (e) => {
+    e.preventDefault();
     runPersonalAnalysis();
   });
+  $("personal-reset").addEventListener("click", resetPersonalForm);
   $("form").addEventListener("submit", (e) => {
     e.preventDefault();
     analyze();
   });
   $("reset-form").addEventListener("click", resetForm);
 
-  // If a player was previously selected, the Tom-Select silent setValue above
-  // doesn't fire onChange — render results explicitly.
+  // If a player was previously selected, populate the dependent dropdowns so
+  // the form is ready, but leave the results blank until the user clicks
+  // Analyser — same flow as Marché.
   if (personalPlayer) {
     rebuildPersonalItemFilter();
     const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
     updatePersonalVariantForItem(itemFilter);
     updatePersonalEnchantsForItem(itemFilter);
-    runPersonalAnalysis();
   }
 }
 
@@ -577,6 +578,25 @@ function resetForm() {
   }
   $("results").hidden = true;
   $("empty").hidden = true;
+}
+
+function resetPersonalForm() {
+  if (personalPlayerTS) personalPlayerTS.clear(true);
+  personalPlayer = null;
+  localStorage.removeItem("personal_player");
+  if (personalItemFilterTS) personalItemFilterTS.clear(true);
+  if (personalVariantTS) personalVariantTS.clear(true);
+  $("personal-variant-block").hidden = true;
+  hidePersonalEnchants();
+  initDefaultPeriod("personal");
+  rebuildPersonalItemFilter();
+  personalPage = 0;
+  if (personalChart) {
+    try { personalChart.destroy(); } catch (_) { /* noop */ }
+    personalChart = null;
+  }
+  $("personal-results").hidden = true;
+  $("personal-empty").hidden = true;
 }
 
 function buildIndices() {
@@ -1395,12 +1415,9 @@ function initPersonalPlayerPicker() {
       else localStorage.removeItem("personal_player");
       personalPage = 0;
       rebuildPersonalItemFilter();
-      // Item filter resets to "" → variant/enchant blocks hide automatically
-      // via updatePersonal* below (called from rebuildPersonalItemFilter via
-      // its own onChange). Belt + suspenders here:
       $("personal-variant-block").hidden = true;
       hidePersonalEnchants();
-      runPersonalAnalysis();
+      // Results stay stale until the user hits Analyser — same flow as Marché.
     },
   });
 
@@ -1467,7 +1484,6 @@ function initPersonalItemFilter() {
       personalPage = 0;
       updatePersonalVariantForItem(val);
       updatePersonalEnchantsForItem(val);
-      runPersonalAnalysis();
     },
   });
   rebuildPersonalItemFilter();
@@ -1486,10 +1502,6 @@ function initPersonalVariantDropdown() {
       option: (data, escape) => `<div>${escape(data.text)}</div>`,
       item: (data, escape) => `<div>${escape(data.text)}</div>`,
       no_results: () => `<div class="no-results">${t("variant_no_results")}</div>`,
-    },
-    onChange: () => {
-      personalPage = 0;
-      runPersonalAnalysis();
     },
   });
 }
@@ -1514,10 +1526,6 @@ function initPersonalEnchantDropdown() {
       optgroup_header: (data, escape) =>
         `<div class="optgroup-header">${escape(data.label)}</div>`,
       no_results: () => `<div class="no-results">${t("enchant_no_results")}</div>`,
-    },
-    onChange: () => {
-      personalPage = 0;
-      runPersonalAnalysis();
     },
   });
 }
@@ -1694,12 +1702,12 @@ function rebuildPersonalItemFilter() {
 function onPersonalPeriodChange() {
   syncPeriodPresetButtons("personal");
   rebuildPersonalItemFilter();
-  // Variant/enchant counts shift with the period; refresh them too.
+  // Variant/enchant counts shift with the period; refresh them too. Results
+  // stay stale until the user clicks Analyser — same flow as Marché.
   const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
   updatePersonalVariantForItem(itemFilter);
   updatePersonalEnchantsForItem(itemFilter);
   personalPage = 0;
-  runPersonalAnalysis();
 }
 
 function formatSaleLabel(sale) {
