@@ -49,7 +49,7 @@ const STRINGS = {
     "results.heading": "À quel prix vendre&nbsp;?",
     "results.unit": "par unité",
     "results.help":
-      "Le <strong>prix juste</strong> est ta meilleure cible (au milieu du marché). <strong>Vendre vite</strong> = un peu en dessous pour partir rapidement. <strong>Patient</strong> = haut du marché, prend plus de temps.",
+      "Tous les prix sont <strong>par unité</strong> — pense à multiplier par la quantité que tu vends. Le <strong>prix juste</strong> est ta meilleure cible (milieu du marché). <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché, plus lent.",
     "reco.fast": "Vendre vite",
     "reco.fast.sub": "25% des ventes en dessous",
     "reco.fair": "Prix juste",
@@ -88,6 +88,8 @@ const STRINGS = {
     stats_n_sales: "Nombre de ventes",
     stats_pace: "Cadence",
     stats_pace_value: (n) => `${n} par jour`,
+    stats_qty_median: "Quantité médiane",
+    stats_qty_value: (n) => `${fmt.format(n)} unité${n > 1 ? "s" : ""}`,
     stats_avg: "Prix moyen",
     avg_warning: (avg, fair) =>
       `⚠️ Le prix moyen (${avg}) est très différent du prix juste (${fair}). Quelques ventes hors-norme tirent la moyenne. Fie-toi à la reco prix au-dessus.`,
@@ -162,7 +164,7 @@ const STRINGS = {
     "results.heading": "What price should I sell at?",
     "results.unit": "per unit",
     "results.help":
-      "The <strong>fair price</strong> is your best target (middle of the market). <strong>Sell fast</strong> = a bit below to clear quickly. <strong>Patient</strong> = top of the market, takes longer.",
+      "All prices are <strong>per unit</strong> — multiply by your listing quantity. The <strong>fair price</strong> is your best target (middle of the market). <strong>Sell fast</strong> = a bit below to clear quickly. <strong>Patient</strong> = top of the market, slower.",
     "reco.fast": "Sell fast",
     "reco.fast.sub": "25% of sales are below",
     "reco.fair": "Fair price",
@@ -200,6 +202,8 @@ const STRINGS = {
     stats_n_sales: "Number of sales",
     stats_pace: "Pace",
     stats_pace_value: (n) => `${n} per day`,
+    stats_qty_median: "Median quantity",
+    stats_qty_value: (n) => `${fmt.format(n)} unit${n > 1 ? "s" : ""}`,
     stats_avg: "Average price",
     avg_warning: (avg, fair) =>
       `⚠️ The average (${avg}) is far from the fair price (${fair}). A few outlier sales skew the mean. Trust the price reco above.`,
@@ -1148,6 +1152,8 @@ function analyze() {
   const q3 = quantile(prices, 0.75);
   const days = Math.max(1, (toTs - fromTs) / DAY_MS);
   const perDay = sales.length / days;
+  const quantities = sales.map((s) => s.a).sort((a, b) => a - b);
+  const medianQty = quantile(quantities, 0.5);
 
   $("reco-fast").textContent = fmtPriceRound(q1);
   $("reco-fair").textContent = fmtPriceRound(median);
@@ -1159,6 +1165,7 @@ function analyze() {
   $("stats-body").innerHTML = [
     [t("stats_n_sales"), fmt.format(sales.length)],
     [t("stats_pace"), t("stats_pace_value", perDay.toFixed(1))],
+    [t("stats_qty_median"), t("stats_qty_value", Math.round(medianQty))],
     [t("stats_avg"), fmtPriceRound(avg)],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
 
