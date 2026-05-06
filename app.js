@@ -58,7 +58,7 @@ const STRINGS = {
     "results.heading": "À quel prix vendre&nbsp;?",
     "results.unit": "par unité",
     "results.help":
-      "Tous les prix sont <strong>par unité</strong> — pense à multiplier par la quantité que tu vends. Le <strong>prix juste</strong> est ta meilleure cible (milieu du marché). <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché, plus lent.",
+      "Prix <strong>par unité</strong> en <strong>brut</strong> — c'est ce qui s'affiche dans /ah (taxe HDV de 10% incluse). Les <strong>totaux</strong> côté Par joueur affichent le net (ce que tu reçois) avec le brut en dessous pour info. <strong>Prix juste</strong> = milieu du marché. <strong>Vendre vite</strong> = un peu en dessous. <strong>Patient</strong> = haut du marché.",
     "reco.fast": "Vendre vite",
     "reco.fast.sub": "25% des ventes en dessous",
     "reco.fair": "Prix juste",
@@ -184,7 +184,7 @@ const STRINGS = {
     "results.heading": "What price should I sell at?",
     "results.unit": "per unit",
     "results.help":
-      "All prices are <strong>per unit</strong> — multiply by your listing quantity. The <strong>fair price</strong> is your best target (middle of the market). <strong>Sell fast</strong> = a bit below to clear quickly. <strong>Patient</strong> = top of the market, slower.",
+      "Per-unit prices shown <strong>gross</strong> — that's what /ah displays (10% AH tax included). On the per-player side, <strong>totals</strong> show the net (what you actually receive) with the gross underneath for context. <strong>Fair price</strong> = middle of the market. <strong>Sell fast</strong> = a bit below. <strong>Patient</strong> = top of the market.",
     "reco.fast": "Sell fast",
     "reco.fast.sub": "25% of sales are below",
     "reco.fair": "Fair price",
@@ -1151,7 +1151,7 @@ function showBreakdown(item, sales) {
     tr.innerHTML = `
       <td>${g.label}</td>
       <td class="text-end font-monospace">${fmt.format(g.sales.length)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(med)}${fmtBrutSubcellRound(med)}</td>`;
+      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(med))}</td>`;
     if (g.filter) {
       tr.addEventListener("click", () => applyBreakdownFilter(g.filter));
     }
@@ -1221,13 +1221,11 @@ function analyze() {
   const quantities = sales.map((s) => s.a).sort((a, b) => a - b);
   const medianQty = quantile(quantities, 0.5);
 
-  const grossLabel = t("ui.gross");
-  $("reco-fast").textContent = fmtPriceRound(q1);
-  $("reco-fair").textContent = fmtPriceRound(median);
-  $("reco-max").textContent  = fmtPriceRound(q3);
-  $("reco-fast-brut").textContent = `${fmtPriceRound(grossPrice(q1))} ${grossLabel}`;
-  $("reco-fair-brut").textContent = `${fmtPriceRound(grossPrice(median))} ${grossLabel}`;
-  $("reco-max-brut").textContent  = `${fmtPriceRound(grossPrice(q3))} ${grossLabel}`;
+  // Per-unit prices shown as gross (matches /ah). Conversion happens at
+  // display time only — the underlying quantiles stay net for math.
+  $("reco-fast").textContent = fmtPriceRound(grossPrice(q1));
+  $("reco-fair").textContent = fmtPriceRound(grossPrice(median));
+  $("reco-max").textContent  = fmtPriceRound(grossPrice(q3));
 
   showLiquidity(perDay);
   showBreakdown(item, sales);
@@ -1236,13 +1234,13 @@ function analyze() {
     [t("stats_n_sales"), fmt.format(sales.length)],
     [t("stats_pace"), t("stats_pace_value", perDay.toFixed(1))],
     [t("stats_qty_median"), t("stats_qty_value", Math.round(medianQty))],
-    [t("stats_avg"), `${fmtPriceRound(avg)} <span class="text-secondary fw-normal opacity-75 small ms-2">${fmtPriceRound(grossPrice(avg))} ${t("ui.gross")}</span>`],
+    [t("stats_avg"), fmtPriceRound(grossPrice(avg))],
   ].map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("");
 
   const ratio = avg / median;
   $("avg-note").textContent =
     ratio > 1.5 || ratio < 0.7
-      ? t("avg_warning", fmtPriceRound(avg), fmtPriceRound(median))
+      ? t("avg_warning", fmtPriceRound(grossPrice(avg)), fmtPriceRound(grossPrice(median)))
       : "";
 
   drawChart(sales, fromTs, toTs);
@@ -1286,9 +1284,11 @@ function drawChart(sales, fromTs, toTs) {
   _lastChartArgs = [sales, fromTs, toTs];
   const nDays = Math.max(1, Math.ceil((toTs - fromTs) / DAY_MS));
   const byDay = Array.from({ length: nDays }, () => []);
+  // Bin gross unit prices directly so the chart axis/tooltip show /ah-style
+  // numbers without per-render conversion.
   for (const s of sales) {
     const i = Math.min(nDays - 1, Math.max(0, Math.floor((s.t - fromTs) / DAY_MS)));
-    byDay[i].push(unitPrice(s));
+    byDay[i].push(grossPrice(unitPrice(s)));
   }
 
   const minSamples = 8;
@@ -1374,8 +1374,7 @@ function buildChartOptions(medianData, rangeData, counts) {
         return `
           <div style="padding:.5rem .75rem;font-family:inherit">
             <div style="font-weight:600;font-size:.8rem;color:${axisColor};margin-bottom:.25rem">${fmtDate(x)}</div>
-            <div style="margin-bottom:.15rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(med)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("chart_tt_label")}</span></div>
-            <div style="color:${axisColor};font-size:.8rem;margin-bottom:.25rem;opacity:.75">${fmtPrice(grossPrice(med))} ${t("ui.gross")}</div>
+            <div style="margin-bottom:.25rem"><strong style="font-size:1.1rem;color:${valueColor}">${fmtPrice(med)}</strong> <span style="color:${axisColor};font-size:.85rem">${t("chart_tt_label")}</span></div>
             <div style="font-size:.85rem;color:${axisColor}">${t("chart_tt_range", low, high)}</div>
             <div style="font-size:.85rem;color:${axisColor}">${t("chart_tt_n_sales", c)}</div>
           </div>`;
@@ -1845,12 +1844,13 @@ function runPersonalAnalysis() {
   const total = sales.reduce((acc, s) => acc + s.p, 0);
   const unitPrices = sales.map(unitPrice).sort((a, b) => a - b);
   const median = quantile(unitPrices, 0.5);
-  const grossLbl = t("ui.gross");
+  // Total revenu stays dual (net big + brut small) — it's an aggregate where
+  // the dual context is informative. Per-unit median is gross only (matches
+  // /ah listings, single value keeps the card clean).
   $("personal-total").textContent = fmtPrice(total);
-  $("personal-total-brut").textContent = `${fmtPrice(grossPrice(total))} ${grossLbl}`;
+  $("personal-total-brut").textContent = `${fmtPrice(grossPrice(total))} ${t("ui.gross")}`;
   $("personal-count").textContent = fmt.format(sales.length);
-  $("personal-median").textContent = fmtPriceRound(median);
-  $("personal-median-brut").textContent = `${fmtPriceRound(grossPrice(median))} ${grossLbl}`;
+  $("personal-median").textContent = fmtPriceRound(grossPrice(median));
 
   const sorted = sales.slice().sort(personalSortComparator);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PERSONAL_PAGE_SIZE));
@@ -1959,7 +1959,7 @@ function renderPersonalBreakdown(sales) {
       <td>${escapeHtml(row.label)}</td>
       <td class="text-end font-monospace">${fmt.format(row.count)}</td>
       <td class="text-end font-monospace">${fmtPriceRound(row.total)}${fmtBrutSubcellRound(row.total)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(row.medianUnit)}${fmtBrutSubcellRound(row.medianUnit)}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(row.medianUnit))}</td>
     `;
     tr.addEventListener("click", () => switchToMarketWithSale(row.sample));
     tbody.appendChild(tr);
@@ -2081,7 +2081,7 @@ function renderPersonalTable(sales) {
       <td class="text-nowrap">${escapeHtml(fmtDateTime(sale.t))}</td>
       <td><a href="#" class="personal-item-link link-primary text-decoration-none">${escapeHtml(formatSaleLabel(sale))}</a></td>
       <td class="text-end font-monospace">${fmt.format(sale.a)}</td>
-      <td class="text-end font-monospace">${fmtPriceRound(unitPrice(sale))}${fmtBrutSubcellRound(unitPrice(sale))}</td>
+      <td class="text-end font-monospace">${fmtPriceRound(grossPrice(unitPrice(sale)))}</td>
       <td class="text-end font-monospace">${fmtPrice(sale.p)}${fmtBrutSubcell(sale.p)}</td>
       <td>${buyerName ? `<a href="#" class="personal-buyer-link">${escapeHtml(buyerName)}</a>` : "—"}</td>
     `;
