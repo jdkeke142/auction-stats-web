@@ -515,6 +515,10 @@ async function init() {
   $("to").addEventListener("change", onPeriodChange);
   $("personal-from").addEventListener("change", onPersonalPeriodChange);
   $("personal-to").addEventListener("change", onPersonalPeriodChange);
+  $("personal-enchants-strict").addEventListener("change", () => {
+    personalPage = 0;
+    runPersonalAnalysis();
+  });
   $("form").addEventListener("submit", (e) => {
     e.preventDefault();
     analyze();
@@ -1419,6 +1423,10 @@ function initPersonalItemFilter() {
     searchField: ["text", "value"],
     maxOptions: 200,
     create: false,
+    // clear_button (X inside the input) replaces the awkward "all items" empty
+    // option — the user types into a clean field, hits X to clear back to
+    // "Tous les items" (which is purely a placeholder, not a selectable row).
+    plugins: ["clear_button"],
     sortField: { field: "$order" },
     render: {
       option: (data, escape) => `<div>${escape(data.text)}</div>`,
@@ -1543,6 +1551,13 @@ function hidePersonalEnchants() {
   personalEnchantTS.clearOptions();
   personalEnchantTS.clearOptionGroups();
   $("personal-enchants-block").hidden = true;
+  const cb = $("personal-enchants-strict");
+  if (cb) cb.checked = false;
+}
+
+function isPersonalStrictMode() {
+  const cb = $("personal-enchants-strict");
+  return !!(cb && cb.checked);
 }
 
 function updatePersonalEnchantsForItem(material) {
@@ -1613,12 +1628,11 @@ function rebuildPersonalItemFilter() {
   if (!personalItemFilterTS) return;
   const previousValue = personalItemFilterTS.getValue();
   personalItemFilterTS.clearOptions();
-
-  const allItemsOption = { value: "", text: t("personal.item_filter_placeholder") };
+  personalItemFilterTS.settings.placeholder = t("personal.item_filter_placeholder");
 
   if (!personalPlayer) {
-    personalItemFilterTS.addOption(allItemsOption);
-    personalItemFilterTS.setValue("", true);
+    personalItemFilterTS.clear(true);
+    syncTSPlaceholder(personalItemFilterTS);
     return;
   }
 
@@ -1630,7 +1644,7 @@ function rebuildPersonalItemFilter() {
     counts.set(s.m, (counts.get(s.m) || 0) + 1);
   }
 
-  const options = [allItemsOption];
+  const options = [];
   for (const [m, c] of [...counts.entries()].sort((a, b) => b[1] - a[1])) {
     options.push({
       value: m,
@@ -1638,12 +1652,11 @@ function rebuildPersonalItemFilter() {
     });
   }
   personalItemFilterTS.addOptions(options);
-  personalItemFilterTS.settings.placeholder = t("personal.item_filter_placeholder");
   syncTSPlaceholder(personalItemFilterTS);
   if (previousValue && counts.has(previousValue)) {
     personalItemFilterTS.setValue(previousValue, true);
   } else {
-    personalItemFilterTS.setValue("", true);
+    personalItemFilterTS.clear(true);
   }
   personalItemFilterTS.refreshOptions(false);
 }
@@ -1691,6 +1704,7 @@ function runPersonalAnalysis() {
   const itemFilter = personalItemFilterTS && personalItemFilterTS.getValue();
   const variant = itemFilter ? getSelectedPersonalVariant(itemFilter) : null;
   const ench = itemFilter ? getSelectedPersonalEnchants() : {};
+  const strict = itemFilter ? isPersonalStrictMode() : false;
   const sales = DATA.sales.filter(
     (s) =>
       s.s === personalPlayer &&
@@ -1698,7 +1712,7 @@ function runPersonalAnalysis() {
       s.t <= toTs &&
       (!itemFilter || s.m === itemFilter) &&
       matchesVariant(s, variant) &&
-      matchesEnchants(s.e, ench, false),
+      matchesEnchants(s.e, ench, strict),
   );
 
   if (!sales.length) {
